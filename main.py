@@ -1,12 +1,11 @@
 import os
-from decimal import Decimal
 
 from dotenv import load_dotenv
 
 from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.bot import TradingBot
-from trader.trading_strategy import PercentualPositionStrategy
+from trader.trading_strategy import IterationStrategy
 
 
 def main():
@@ -26,9 +25,7 @@ def main():
     public_api = MercadoBitcoinPublicAPI()
 
     # Configurar estratégia
-    strategy = PercentualPositionStrategy(
-        percentual_stop_loss=Decimal("0.05"), percentual_gain_treshold=Decimal("0.05")
-    )
+    strategy = IterationStrategy(sell_on_iteration=10)
 
     # Configurar conta
     account = Account(account_api, "BTC-BRL")
@@ -37,7 +34,7 @@ def main():
     bot = TradingBot(public_api, strategy, account)
 
     try:
-        bot.run(interval=1)
+        bot.run(interval=30)
     except KeyboardInterrupt:
         bot.stop()
 
