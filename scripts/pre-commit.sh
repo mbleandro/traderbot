@@ -28,7 +28,7 @@ fi
 # Verificar typing
 echo "🎨 Verificando tipagem..."
 if ! uv run pyright .; then
-    echo "❌ Código não está tipado corretamente. Execute 'make typing-check' para identificar os problemas."
+    echo "❌ Código não está tipado corretamente. Execute 'make typing-check' para listar os problemas."
     exit 1
 fi
 
