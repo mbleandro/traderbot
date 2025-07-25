@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import StrEnum, auto
 from typing import List, Optional
 
-from .api import MercadoBitcoinPrivateAPIBase
+from .api.private_api import MercadoBitcoinPrivateAPIBase
 from .colored_logger import get_trading_logger
 
 

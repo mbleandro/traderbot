@@ -3,6 +3,7 @@ Interface privada da API do Mercado Bitcoin.
 Esta interface requer autenticação e pode ser usada para acessar dados de conta e realizar operações.
 """
 
+from abc import ABC, abstractmethod
 import json
 import logging
 from typing import Any
@@ -16,7 +17,6 @@ from tenacity import (
     wait_exponential,
 )
 
-from trader.api import MercadoBitcoinPrivateAPIBase
 
 from ..models.account_data import AccountBalanceData, AccountData
 
@@ -25,6 +25,36 @@ class UnauthorizedError(Exception):
     """Exceção para erros de autenticação (401)"""
 
     pass
+
+
+class MercadoBitcoinPrivateAPIBase(ABC):
+    """
+    Interface abstrata da API privada do Mercado Bitcoin.
+    """
+
+    @abstractmethod
+    def get_accounts(self) -> list[AccountData]:
+        """Obtém lista de contas"""
+        ...
+
+    @abstractmethod
+    def get_account_balance(self, account_id: str) -> list[AccountBalanceData]:
+        """Obtém saldo da conta"""
+        ...
+
+    @abstractmethod
+    def place_order(
+        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
+    ) -> str:
+        """Coloca uma ordem de compra/venda"""
+        ...
+
+    @abstractmethod
+    def get_orders(
+        self, symbol: str | None = None, status: str | None = None
+    ) -> dict[str, Any]:
+        """Lista ordens"""
+        ...
 
 
 class MercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):

@@ -6,7 +6,7 @@ Esta classe simula o comportamento da API real sem fazer requisições HTTP.
 import logging
 from typing import Any, List
 
-from trader.api import MercadoBitcoinPrivateAPIBase
+from trader.api.private_api import MercadoBitcoinPrivateAPIBase
 
 from ..models.account_data import AccountBalanceData, AccountData
 
