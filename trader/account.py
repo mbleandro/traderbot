@@ -110,62 +110,38 @@ class Account:
         btc_balance = self.get_balance("BTC")
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
-    def execute_buy_order(self, price: Decimal, quantity_calculator) -> bool:
-        """Executa ordem de compra"""
-        if not self.can_buy():
+    def place_order(self, price: Decimal, side: str, quantity: Decimal) -> bool:
+        """Coloca uma ordem de compra/venda"""
+
+        if side == "buy" and not self.can_buy():
             self.trading_logger.log_warning("Não é possível executar compra no momento")
             return False
-
-        balance = self.get_balance("BRL")
-
-        quantity_str = quantity_calculator(balance, price)
-        quantity = Decimal(quantity_str)
-
-        try:
-            order_id = self.api.place_order(
-                account_id=self.account_id,
-                symbol=self.symbol,
-                side="buy",
-                type_order="market",
-                quantity=quantity_str,
-            )
-
-            # Criar nova posição
-            self.current_position = Position(
-                order_id=order_id,
-                symbol=self.symbol,
-                side=Sides.LONG,
-                quantity=quantity,
-                entry_price=price,
-                entry_time=datetime.now(),
-                current_price=price,
-            )
-
-            return True
-
-        except Exception as e:
-            self.trading_logger.log_error("Erro ao executar compra", e)
-            return False
-
-    def execute_sell_order(self) -> bool:
-        """Executa ordem de venda"""
-        if not self.can_sell():
+        if side == "sell" and not self.can_sell():
             self.trading_logger.log_warning("Não é possível executar venda no momento")
             return False
 
-        btc_balance = self.get_balance("BTC")
-
         try:
             order_id = self.api.place_order(
                 account_id=self.account_id,
                 symbol=self.symbol,
-                side="sell",
+                side=side,
                 type_order="market",
-                quantity=f"{btc_balance:.8f}",
+                quantity=str(quantity),
             )
+            if side == "buy":
+                # Criar nova posição
+                self.current_position = Position(
+                    order_id=order_id,
+                    symbol=self.symbol,
+                    side=Sides.LONG,
+                    quantity=quantity,
+                    entry_price=price,
+                    entry_time=datetime.now(),
+                    current_price=price,
+                )
 
             # Calcular PnL e adicionar ao histórico
-            if self.current_position:
+            if side == "sell" and self.current_position:
                 current_price = self.current_position.current_price or Decimal("0.0")
                 realized_pnl = (
                     current_price - self.current_position.entry_price
@@ -195,13 +171,12 @@ class Account:
                         f"💸 Posição fechada com PREJUÍZO - PnL: R$ {realized_pnl:.2f}"
                     )
 
-            # Limpar posição atual
-            self.current_position = None
-
+                # Limpar posição atual
+                self.current_position = None
             return True
 
         except Exception as e:
-            self.trading_logger.log_error("Erro ao executar venda", e)
+            self.trading_logger.log_error("Erro ao executar compra", e)
             return False
 
     def update_position_price(self, current_price: Decimal):
