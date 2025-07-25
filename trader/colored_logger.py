@@ -199,7 +199,7 @@ class TradingLogger:
         """Log específico para parada do bot"""
         self.logger.info("🛑 Bot parado")
 
-    def log_error(self, message: str, exception: Exception = None):
+    def log_error(self, message: str, exception: Exception | None = None):
         """Log específico para erros"""
         if exception:
             self.logger.error(f"❌ {message}: {str(exception)}")

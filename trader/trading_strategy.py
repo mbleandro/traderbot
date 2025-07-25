@@ -7,6 +7,8 @@ from .account import Position
 class TradingStrategy(ABC):
     """Classe base para estratégias de trading"""
 
+    price_history: list[Decimal]
+
     @abstractmethod
     def should_buy(self, market_price: Decimal) -> bool:
         pass
@@ -20,7 +22,7 @@ class TradingStrategy(ABC):
         pass
 
     @abstractmethod
-    def update_price(self, price: Decimal, position: Position):
+    def update_price(self, price: Decimal, position: Position | None):
         pass
 
 
@@ -32,7 +34,7 @@ class SimpleMovingAverageStrategy(TradingStrategy):
         self.long_period = long_period
         self.price_history = []
 
-    def update_price(self, price: Decimal, position: Position):
+    def update_price(self, price: Decimal, position: Position | None):
         """Atualiza histórico de preços"""
         self.price_history.append(price)
         if len(self.price_history) > self.long_period:
@@ -41,8 +43,8 @@ class SimpleMovingAverageStrategy(TradingStrategy):
     def _calculate_sma(self, period: int) -> Decimal:
         """Calcula média móvel simples"""
         if len(self.price_history) < period:
-            return 0
-        return sum(self.price_history[-period:]) / period
+            return Decimal("0")
+        return sum(self.price_history[-period:]) / Decimal(str(period))
 
     def should_buy(self, market_price: Decimal) -> bool:
         """Compra quando SMA curta cruza acima da SMA longa"""
@@ -93,18 +95,19 @@ class PercentualPositionStrategy(TradingStrategy):
         """Calcula preço de gain threshold baseado no percentual"""
         return self.position_price_lock * (Decimal("1") + self.percentual_gain_treshold)
 
-    def update_price(self, price: Decimal, position: Position):
+    def update_price(self, price: Decimal, position: Position | None):
         """Atualiza histórico de preços"""
         self.price_history.append(price)
-        if price >= self._price_gain_treshold() or (position and position.order_id != self.last_position_id):
+        if price >= self._price_gain_treshold() or (
+            position and position.order_id != self.last_position_id
+        ):
             self.price_lock = price
             self.last_position_id = position.order_id if position else None
             self.position_price_lock = price
 
     def should_buy(self, market_price: Decimal) -> bool:
         _should_buy = (
-            market_price < self._price_stop_loss()
-            or not self.last_position_id
+            market_price < self._price_stop_loss() or not self.last_position_id
         )
         return _should_buy
 
@@ -143,17 +146,17 @@ class HardPriceStrategy(TradingStrategy):
         """Calcula preço de gain threshold baseado no valor absoluto"""
         return self.price_lock + self.hard_gain_treshold
 
-    def update_price(self, price: Decimal, position: Position):
+    def update_price(self, price: Decimal, position: Position | None):
         """Atualiza histórico de preços"""
         self.price_history.append(price)
-        if price >= self._price_gain_treshold() or (position and position.order_id != self.last_position_id):
+        if price >= self._price_gain_treshold() or (
+            position and position.order_id != self.last_position_id
+        ):
             self.price_lock = price
             self.last_position_id = position.order_id if position else None
 
     def should_buy(self, market_price: Decimal) -> bool:
-        _should_buy = self.price_history[
-            -1
-        ] < market_price or not self.last_position_id
+        _should_buy = self.price_history[-1] < market_price or not self.last_position_id
         return _should_buy
 
     def should_sell(self, market_price: Decimal, position: Position) -> bool:

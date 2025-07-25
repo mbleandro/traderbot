@@ -5,7 +5,8 @@ Esta interface requer autenticação e pode ser usada para acessar dados de cont
 
 import json
 import logging
-from typing import Any, Dict, List
+from abc import ABC, abstractmethod
+from typing import Any
 
 import requests
 from tenacity import (
@@ -25,7 +26,37 @@ class UnauthorizedError(Exception):
     pass
 
 
-class MercadoBitcoinPrivateAPI:
+class MercadoBitcoinPrivateAPIBase(ABC):
+    """
+    Interface abstrata da API privada do Mercado Bitcoin.
+    """
+
+    @abstractmethod
+    def get_accounts(self) -> list[AccountData]:
+        """Obtém lista de contas"""
+        ...
+
+    @abstractmethod
+    def get_account_balance(self, account_id: str) -> list[AccountBalanceData]:
+        """Obtém saldo da conta"""
+        ...
+
+    @abstractmethod
+    def place_order(
+        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
+    ) -> str:
+        """Coloca uma ordem de compra/venda"""
+        ...
+
+    @abstractmethod
+    def get_orders(
+        self, symbol: str | None = None, status: str | None = None
+    ) -> dict[str, Any]:
+        """Lista ordens"""
+        ...
+
+
+class MercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):
     """
     Interface privada da API do Mercado Bitcoin.
     Requer autenticação - ideal para operações que precisam de acesso à conta.
@@ -69,8 +100,8 @@ class MercadoBitcoinPrivateAPI:
         reraise=True,
     )
     def _make_authenticated_request(
-        self, method: str, endpoint: str, data: Dict | None = None
-    ) -> Dict[str, Any]:
+        self, method: str, endpoint: str, data: dict | None = None
+    ) -> Any:
         """Faz requisição autenticada para a API com retry automático em caso de 401"""
         url = f"{self.base_url}{endpoint}"
         body = json.dumps(data) if data else ""
@@ -92,12 +123,14 @@ class MercadoBitcoinPrivateAPI:
 
         return response.json()
 
-    def get_accounts(self) -> List[AccountData]:
+    def get_accounts(self) -> list[AccountData]:
         """Obtém lista de contas"""
-        response = self._make_authenticated_request("GET", "/accounts")
+        response: list[dict[str, Any]] = self._make_authenticated_request(
+            "GET", "/accounts"
+        )
         return [AccountData.from_dict(account) for account in response]
 
-    def get_account_balance(self, account_id: str) -> List[AccountBalanceData]:
+    def get_account_balance(self, account_id: str) -> list[AccountBalanceData]:
         """Obtém saldo da conta"""
         response = self._make_authenticated_request(
             "GET", f"/accounts/{account_id}/balances"
@@ -120,8 +153,8 @@ class MercadoBitcoinPrivateAPI:
 
     def get_orders(
         self, symbol: str | None = None, status: str | None = None
-    ) -> Dict[str, Any]:
-        """Lista ordens"""
+    ) -> dict[str, Any]:
+        """lista ordens"""
         endpoint = "/orders"
         params = []
         if symbol:

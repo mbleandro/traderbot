@@ -14,8 +14,8 @@ def main():
     load_dotenv()
 
     # Configurar credenciais (use variáveis de ambiente)
-    api_key = os.getenv("MB_API_KEY")
-    api_secret = os.getenv("MB_API_SECRET")
+    api_key = os.getenv("MB_API_KEY", "fake_key")
+    api_secret = os.getenv("MB_API_SECRET", "fake_secret")
 
     if not api_key or not api_secret:
         print("Configure as variáveis MB_API_KEY e MB_API_SECRET")

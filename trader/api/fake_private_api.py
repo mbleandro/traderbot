@@ -4,12 +4,14 @@ Esta classe simula o comportamento da API real sem fazer requisições HTTP.
 """
 
 import logging
-from typing import List
+from typing import Any, List
+
+from trader.api.private_api import MercadoBitcoinPrivateAPIBase
 
 from ..models.account_data import AccountBalanceData, AccountData
 
 
-class FakeMercadoBitcoinPrivateAPI:
+class FakeMercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):
     """
     Interface falsa da API privada do Mercado Bitcoin para testes.
     Simula o comportamento da API real sem fazer requisições HTTP reais.
@@ -47,7 +49,7 @@ class FakeMercadoBitcoinPrivateAPI:
             ],
         }
 
-        self._fake_orders = []
+        self._fake_orders: list[dict[str, str]] = []
 
     def get_accounts(self) -> List[AccountData]:
         """Retorna lista de contas fake"""
@@ -81,3 +83,9 @@ class FakeMercadoBitcoinPrivateAPI:
 
         self.logger.info(f"Ordem fake criada: {order_id}")
         return order_id
+
+    def get_orders(
+        self, symbol: str | None = None, status: str | None = None
+    ) -> dict[str, Any]:
+        """Retorna lista de ordens fake"""
+        return self._fake_orders[0]  # TODO: corrigir tipo do retorno

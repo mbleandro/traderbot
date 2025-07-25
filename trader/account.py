@@ -1,10 +1,16 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum, auto
 from typing import List, Optional
 
-from .api import MercadoBitcoinPrivateAPI
+from .api.private_api import MercadoBitcoinPrivateAPIBase
 from .colored_logger import get_trading_logger
+
+
+class Sides(StrEnum):
+    LONG = auto()
+    SHORT = auto()
 
 
 @dataclass
@@ -13,7 +19,7 @@ class Position:
 
     order_id: str
     symbol: str
-    side: str  # "long", "short"
+    side: Sides
     quantity: Decimal
     entry_price: Decimal
     entry_time: datetime
@@ -25,7 +31,7 @@ class Position:
         if self.current_price is None:
             return Decimal("0.0")
 
-        if self.side == "long":
+        if self.side == Sides.LONG:
             return (self.current_price - self.entry_price) * self.quantity
         else:  # short
             return (self.entry_price - self.current_price) * self.quantity
@@ -55,7 +61,7 @@ class PositionHistory:
 class Account:
     """Classe responsável por gerenciar balanço, posições e execução de ordens"""
 
-    def __init__(self, api: MercadoBitcoinPrivateAPI, symbol: str = "BTC-BRL"):
+    def __init__(self, api: MercadoBitcoinPrivateAPIBase, symbol: str = "BTC-BRL"):
         self.api = api
         self.symbol = symbol
         self.account_id = self.get_api_account_id("BRL")
@@ -71,7 +77,7 @@ class Account:
         for account in accounts:
             if account.currency == currency:
                 return account.id
-        return None
+        raise Exception(f"Conta para {currency} não encontrada")
 
     def get_balance(self, currency: str) -> Decimal:
         """Obtém saldo de uma moeda específica"""
@@ -81,7 +87,7 @@ class Account:
                 return balance.available
         return Decimal("0.0")
 
-    def get_position(self) -> Optional[Position]:
+    def get_position(self) -> Position | None:
         """Retorna a posição atual"""
         return self.current_position
 
@@ -128,7 +134,7 @@ class Account:
             self.current_position = Position(
                 order_id=order_id,
                 symbol=self.symbol,
-                side="long",
+                side=Sides.LONG,
                 quantity=quantity,
                 entry_price=price,
                 entry_time=datetime.now(),
@@ -205,7 +211,7 @@ class Account:
 
     def get_total_realized_pnl(self) -> Decimal:
         """Retorna o PnL total realizado"""
-        return sum(pos.realized_pnl for pos in self.position_history)
+        return Decimal(str(sum(pos.realized_pnl for pos in self.position_history)))
 
     def get_unrealized_pnl(self) -> Decimal:
         """Retorna o PnL não realizado da posição atual"""

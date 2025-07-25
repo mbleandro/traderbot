@@ -6,7 +6,7 @@ Validam comportamento de compra e venda com mínimo de mocking.
 from datetime import datetime
 from decimal import Decimal
 
-from trader.account import Position
+from trader.account import Position, Sides
 from trader.trading_strategy import (
     HardPriceStrategy,
     PercentualPositionStrategy,
@@ -15,10 +15,11 @@ from trader.trading_strategy import (
 
 order_counter = 1
 
+
 def create_position(
     quantity: Decimal = Decimal("0.1"),
     entry_price: Decimal = Decimal("100.0"),
-    current_price: Decimal = None,
+    current_price: Decimal | None = None,
 ) -> Position:
     """Helper para criar posições de teste"""
     global order_counter
@@ -26,7 +27,7 @@ def create_position(
     return Position(
         order_id=f"test-order-{order_counter}",
         symbol="BTC-BRL",
-        side="long",
+        side=Sides.LONG,
         quantity=quantity,
         entry_price=entry_price,
         entry_time=datetime.now(),
@@ -112,6 +113,7 @@ def test_percentual_position_strategy_initial_buy():
 
     # Sem posição inicial, deve comprar
     assert strategy.should_buy(Decimal("100")) is True
+
 
 def test_percentual_position_strategy_stop_loss_nao_vende_se_preco_aumenta():
     """Testa se strategy percentual não vende se preço aumenta após stop loss"""
