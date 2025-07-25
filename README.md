@@ -19,7 +19,7 @@ make run
 ```
 
 ## Linting e Formatação
-Este projeto usa **Ruff** como linter e formatter.
+Este projeto usa **Ruff** como linter e formatter e **pyright** para verificação de tipos.
 
 ```bash
 # Verificar código
@@ -33,6 +33,9 @@ make format
 
 # Verificar formatação
 make format-check
+
+# Verificar tipos
+make typing-check
 
 # Executar lint e format em sequência
 make ruff

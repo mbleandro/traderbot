@@ -75,10 +75,11 @@ class TradingBot:
                                 )
 
                 # Verificar se a estratégia indica venda e se é possível vender
-                elif self.account.can_sell() and self.strategy.should_sell(
-                    current_price, position
+                elif (
+                    self.account.can_sell()
+                    and (position := self.account.get_position())
+                    and self.strategy.should_sell(current_price, position)
                 ):
-                    position = self.account.get_position()
                     old_quantity = float(position.quantity) if position else 0.0
 
                     self.trading_logger.log_sell_signal(float(current_price))
