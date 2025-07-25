@@ -3,9 +3,9 @@ Interface privada da API do Mercado Bitcoin.
 Esta interface requer autenticação e pode ser usada para acessar dados de conta e realizar operações.
 """
 
-from abc import ABC, abstractmethod
 import json
 import logging
+from abc import ABC, abstractmethod
 from typing import Any
 
 import requests
@@ -16,7 +16,6 @@ from tenacity import (
     stop_after_attempt,
     wait_exponential,
 )
-
 
 from ..models.account_data import AccountBalanceData, AccountData
 
