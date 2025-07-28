@@ -2,6 +2,20 @@
 
 Trading bot para Mercado Bitcoin
 
+
+## Mapa de Features
+| Feature                             | Status |
+|-------------------------------------|--------|
+| Compra e Venda                      | ✅     |
+| Conta Fake                          | ✅     |
+| Subcontas                           | ❌     |
+| Backtesting                         | ❌     |
+| Relatórios de performance           | ❌     |
+| Multiplos bots                      | ❌     |
+| Stop loss nativo da API             | ❌     |
+| Histórico de posições persistente   | ❌     |
+| Orientado a mudança de preço        | ❌     |
+
 ## Instalação
 ```bash
 make install
