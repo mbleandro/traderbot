@@ -43,10 +43,8 @@ options:
   --strategy STRATEGY   Estratégia de trading a ser usada
   --interval INTERVAL   Intervalo de execução em segundos
   --fake                Utiliza API privada FAKE (default: False)
-  --stop-loss-percentual STOP_LOSS_PERCENTUAL
-                        Percentual de stop_loss (required if strategy = percentual-position
-  --gain-treshold-percentual GAIN_TRESHOLD_PERCENTUAL
-                        Percentual de threshold de ganho (required if strategy = percentual-position)
+  --sell-on-iteration SELL_ON_ITERATION
+                        Número de iterações para vender (required if strategy = interation)
 ```
 
 
