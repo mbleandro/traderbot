@@ -30,7 +30,7 @@ clean: ## Remove arquivos temporários e cache
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
 run: ## Executa o bot principal
-	$(UV) run $(PYTHON) main.py
+	$(UV) run $(PYTHON) main.py $(ARGS)
 
 lint: ## Executa verificação de código com Ruff
 	$(UV) run ruff check .

@@ -15,6 +15,7 @@ from trader.trading_strategy import (
 
 order_counter = 1
 
+
 def create_position(
     quantity: Decimal = Decimal("0.1"),
     entry_price: Decimal = Decimal("100.0"),
@@ -112,6 +113,7 @@ def test_percentual_position_strategy_initial_buy():
 
     # Sem posição inicial, deve comprar
     assert strategy.should_buy(Decimal("100")) is True
+
 
 def test_percentual_position_strategy_stop_loss_nao_vende_se_preco_aumenta():
     """Testa se strategy percentual não vende se preço aumenta após stop loss"""

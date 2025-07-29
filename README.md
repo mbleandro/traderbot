@@ -17,6 +17,24 @@ make install-dev
 ```bash
 make run
 ```
+```bash
+make run ARGS='--strategy=percentual-position --interval=1 --currency=BTC-BRL --stop-loss-percentual=5 --gain-treshold=5 --fake'
+```
+
+## Opções
+```bash
+options:
+  -h, --help            show this help message and exit
+  --currency CURRENCY   Moeda a ser negociada
+  --strategy STRATEGY   Estratégia de trading a ser usada
+  --interval INTERVAL   Intervalo de execução em segundos
+  --fake                Utiliza API privada FAKE (default: False)
+  --stop-loss-percentual STOP_LOSS_PERCENTUAL
+                        Percentual de stop_loss (required if strategy = percentual-position
+  --gain-treshold-percentual GAIN_TRESHOLD_PERCENTUAL
+                        Percentual de threshold de ganho (required if strategy = percentual-position)
+```
+
 
 ## Linting e Formatação
 Este projeto usa **Ruff** como linter e formatter.

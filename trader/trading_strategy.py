@@ -96,15 +96,16 @@ class PercentualPositionStrategy(TradingStrategy):
     def update_price(self, price: Decimal, position: Position):
         """Atualiza histórico de preços"""
         self.price_history.append(price)
-        if price >= self._price_gain_treshold() or (position and position.order_id != self.last_position_id):
+        if price >= self._price_gain_treshold() or (
+            position and position.order_id != self.last_position_id
+        ):
             self.price_lock = price
             self.last_position_id = position.order_id if position else None
             self.position_price_lock = price
 
     def should_buy(self, market_price: Decimal) -> bool:
         _should_buy = (
-            market_price < self._price_stop_loss()
-            or not self.last_position_id
+            market_price < self._price_stop_loss() or not self.last_position_id
         )
         return _should_buy
 
@@ -146,14 +147,14 @@ class HardPriceStrategy(TradingStrategy):
     def update_price(self, price: Decimal, position: Position):
         """Atualiza histórico de preços"""
         self.price_history.append(price)
-        if price >= self._price_gain_treshold() or (position and position.order_id != self.last_position_id):
+        if price >= self._price_gain_treshold() or (
+            position and position.order_id != self.last_position_id
+        ):
             self.price_lock = price
             self.last_position_id = position.order_id if position else None
 
     def should_buy(self, market_price: Decimal) -> bool:
-        _should_buy = self.price_history[
-            -1
-        ] < market_price or not self.last_position_id
+        _should_buy = self.price_history[-1] < market_price or not self.last_position_id
         return _should_buy
 
     def should_sell(self, market_price: Decimal, position: Position) -> bool:
