@@ -32,7 +32,7 @@ make install-dev
 make run
 ```
 ```bash
-make run ARGS='--strategy=percentual-position --interval=1 --currency=BTC-BRL --stop-loss-percentual=5 --gain-treshold=5 --fake'
+make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell-on-iteration=10 --fake'
 ```
 
 ## Opções

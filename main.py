@@ -27,12 +27,12 @@ def main():
         "--fake", action="store_true", help="Utiliza API privada FAKE (default: False)"
     )
 
-    # argumentos para estratégia 'interation'
+    # argumentos para estratégia 'iteration'
     parser.add_argument(
         "--sell-on-iteration",
         type=float,
         default=0,
-        help="Número de iterações para vender (required if strategy = interation)",
+        help="Número de iterações para vender (required if strategy = iteration)",
     )
 
     args = parser.parse_args()
@@ -54,10 +54,10 @@ def main():
     public_api = MercadoBitcoinPublicAPI()
 
     # Configurar estratégia
-    if args.strategy == "interation":
+    if args.strategy == "iteration":
         if not args.sell_on_iteration:
             print(
-                "sell-on-iteration é um argumento obrigatório para estratégia 'interation'"
+                "sell-on-iteration é um argumento obrigatório para estratégia 'iteration'"
             )
             return
         strategy = IterationStrategy(sell_on_iteration=10)
