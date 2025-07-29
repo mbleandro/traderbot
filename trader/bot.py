@@ -48,23 +48,40 @@ class TradingBot:
                 # Atualizar preço da posição atual
                 self.account.update_position_price(current_price)
 
-                self.strategy.update_price(current_price, self.account.get_position())
+                position_signal = self.strategy.on_market_refresh(
+                    current_price,
+                    self.account.get_position(),
+                    self.account.position_history,
+                )
 
-                # Verificar se a estratégia indica compra e se é possível comprar
-                if self.account.can_buy() and self.strategy.should_buy(current_price):
-                    self.trading_logger.log_buy_signal(float(current_price))
-                    success = self.account.execute_buy_order(
-                        current_price, self.strategy.calculate_quantity
+                if position_signal:
+                    last_position = self.account.get_position()
+                    success = self.account.place_order(
+                        current_price,
+                        position_signal.side,
+                        position_signal.quantity,
+                    )
+                    self.trading_logger.log_position_signal(
+                        position_signal.side, float(current_price)
                     )
                     if success:
                         position = self.account.get_position()
-                        if position:
-                            self.trading_logger.log_buy_order(
-                                position.order_id,
-                                float(current_price),
-                                float(position.quantity),
-                            )
-
+                        order_id = (
+                            position.order_id
+                            if position
+                            else last_position.order_id
+                            if last_position
+                            else "N/A"
+                        )
+                        self.trading_logger.log_order_placed(
+                            order_id,
+                            position_signal.side,
+                            float(position.entry_price)
+                            if position
+                            else float(current_price),
+                            float(position_signal.quantity),
+                        )
+                        if position and position_signal.side == "buy":
                             # Rastrear primeira posição para análise de "hold strategy"
                             if self.first_position_entry_price is None:
                                 self.first_position_entry_price = position.entry_price
@@ -73,20 +90,6 @@ class TradingBot:
                                 self.logger.info(
                                     "📌 Primeira posição registrada para análise de hold strategy"
                                 )
-
-                # Verificar se a estratégia indica venda e se é possível vender
-                elif self.account.can_sell() and self.strategy.should_sell(
-                    current_price, position
-                ):
-                    position = self.account.get_position()
-                    old_quantity = float(position.quantity) if position else 0.0
-
-                    self.trading_logger.log_sell_signal(float(current_price))
-                    success = self.account.execute_sell_order()
-                    if success:
-                        self.trading_logger.log_sell_order(
-                            position.order_id, float(current_price), old_quantity
-                        )
 
                 # Log de informações da conta
                 position = self.account.get_position()

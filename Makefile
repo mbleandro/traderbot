@@ -38,6 +38,9 @@ lint: ## Executa verificação de código com Ruff
 lint-fix: ## Executa verificação e corrige automaticamente problemas com Ruff
 	$(UV) run ruff check --fix .
 
+typing-check: ## Executa verificação de typing com pyright
+	$(UV) run pyright .
+
 format: ## Formata o código com Ruff
 	$(UV) run ruff format .
 

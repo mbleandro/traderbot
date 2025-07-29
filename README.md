@@ -2,6 +2,20 @@
 
 Trading bot para Mercado Bitcoin
 
+
+## Mapa de Features
+| Feature                             | Status |
+|-------------------------------------|--------|
+| Compra e Venda                      | ✅     |
+| Conta Fake                          | ✅     |
+| Subcontas                           | ❌     |
+| Backtesting                         | ❌     |
+| Relatórios de performance           | ❌     |
+| Multiplos bots                      | ❌     |
+| Stop loss nativo da API             | ❌     |
+| Histórico de posições persistente   | ❌     |
+| Orientado a mudança de preço        | ❌     |
+
 ## Instalação
 ```bash
 make install
@@ -37,7 +51,7 @@ options:
 
 
 ## Linting e Formatação
-Este projeto usa **Ruff** como linter e formatter.
+Este projeto usa **Ruff** como linter e formatter e **pyright** para verificação de tipos.
 
 ```bash
 # Verificar código
@@ -51,6 +65,9 @@ make format
 
 # Verificar formatação
 make format-check
+
+# Verificar tipos
+make typing-check
 
 # Executar lint e format em sequência
 make ruff

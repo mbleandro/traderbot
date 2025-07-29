@@ -1,10 +1,16 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum, auto
 from typing import List, Optional
 
-from .api import MercadoBitcoinPrivateAPI
+from .api.private_api import MercadoBitcoinPrivateAPIBase
 from .colored_logger import get_trading_logger
+
+
+class Sides(StrEnum):
+    LONG = auto()
+    SHORT = auto()
 
 
 @dataclass
@@ -13,7 +19,7 @@ class Position:
 
     order_id: str
     symbol: str
-    side: str  # "long", "short"
+    side: Sides
     quantity: Decimal
     entry_price: Decimal
     entry_time: datetime
@@ -25,7 +31,7 @@ class Position:
         if self.current_price is None:
             return Decimal("0.0")
 
-        if self.side == "long":
+        if self.side == Sides.LONG:
             return (self.current_price - self.entry_price) * self.quantity
         else:  # short
             return (self.entry_price - self.current_price) * self.quantity
@@ -55,7 +61,7 @@ class PositionHistory:
 class Account:
     """Classe responsável por gerenciar balanço, posições e execução de ordens"""
 
-    def __init__(self, api: MercadoBitcoinPrivateAPI, symbol: str = "BTC-BRL"):
+    def __init__(self, api: MercadoBitcoinPrivateAPIBase, symbol: str = "BTC-BRL"):
         self.api = api
         self.symbol = symbol
         self.account_id = self.get_api_account_id("BRL")
@@ -71,7 +77,7 @@ class Account:
         for account in accounts:
             if account.currency == currency:
                 return account.id
-        return None
+        raise Exception(f"Conta para {currency} não encontrada")
 
     def get_balance(self, currency: str) -> Decimal:
         """Obtém saldo de uma moeda específica"""
@@ -81,7 +87,7 @@ class Account:
                 return balance.available
         return Decimal("0.0")
 
-    def get_position(self) -> Optional[Position]:
+    def get_position(self) -> Position | None:
         """Retorna a posição atual"""
         return self.current_position
 
@@ -104,62 +110,38 @@ class Account:
         btc_balance = self.get_balance("BTC")
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
-    def execute_buy_order(self, price: Decimal, quantity_calculator) -> bool:
-        """Executa ordem de compra"""
-        if not self.can_buy():
+    def place_order(self, price: Decimal, side: str, quantity: Decimal) -> bool:
+        """Coloca uma ordem de compra/venda"""
+
+        if side == "buy" and not self.can_buy():
             self.trading_logger.log_warning("Não é possível executar compra no momento")
             return False
-
-        balance = self.get_balance("BRL")
-
-        quantity_str = quantity_calculator(balance, price)
-        quantity = Decimal(quantity_str)
-
-        try:
-            order_id = self.api.place_order(
-                account_id=self.account_id,
-                symbol=self.symbol,
-                side="buy",
-                type_order="market",
-                quantity=quantity_str,
-            )
-
-            # Criar nova posição
-            self.current_position = Position(
-                order_id=order_id,
-                symbol=self.symbol,
-                side="long",
-                quantity=quantity,
-                entry_price=price,
-                entry_time=datetime.now(),
-                current_price=price,
-            )
-
-            return True
-
-        except Exception as e:
-            self.trading_logger.log_error("Erro ao executar compra", e)
-            return False
-
-    def execute_sell_order(self) -> bool:
-        """Executa ordem de venda"""
-        if not self.can_sell():
+        if side == "sell" and not self.can_sell():
             self.trading_logger.log_warning("Não é possível executar venda no momento")
             return False
 
-        btc_balance = self.get_balance("BTC")
-
         try:
             order_id = self.api.place_order(
                 account_id=self.account_id,
                 symbol=self.symbol,
-                side="sell",
+                side=side,
                 type_order="market",
-                quantity=f"{btc_balance:.8f}",
+                quantity=str(quantity),
             )
+            if side == "buy":
+                # Criar nova posição
+                self.current_position = Position(
+                    order_id=order_id,
+                    symbol=self.symbol,
+                    side=Sides.LONG,
+                    quantity=quantity,
+                    entry_price=price,
+                    entry_time=datetime.now(),
+                    current_price=price,
+                )
 
             # Calcular PnL e adicionar ao histórico
-            if self.current_position:
+            if side == "sell" and self.current_position:
                 current_price = self.current_position.current_price or Decimal("0.0")
                 realized_pnl = (
                     current_price - self.current_position.entry_price
@@ -189,13 +171,12 @@ class Account:
                         f"💸 Posição fechada com PREJUÍZO - PnL: R$ {realized_pnl:.2f}"
                     )
 
-            # Limpar posição atual
-            self.current_position = None
-
+                # Limpar posição atual
+                self.current_position = None
             return True
 
         except Exception as e:
-            self.trading_logger.log_error("Erro ao executar venda", e)
+            self.trading_logger.log_error("Erro ao executar compra", e)
             return False
 
     def update_position_price(self, current_price: Decimal):
@@ -205,7 +186,7 @@ class Account:
 
     def get_total_realized_pnl(self) -> Decimal:
         """Retorna o PnL total realizado"""
-        return sum(pos.realized_pnl for pos in self.position_history)
+        return Decimal(str(sum(pos.realized_pnl for pos in self.position_history)))
 
     def get_unrealized_pnl(self) -> Decimal:
         """Retorna o PnL não realizado da posição atual"""

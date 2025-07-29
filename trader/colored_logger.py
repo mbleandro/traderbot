@@ -147,25 +147,23 @@ class TradingLogger:
         )
         self.logger.info(f"💰 Preço atual {symbol}: R$ {price:.2f}")
 
-    def log_buy_signal(self, price: float):
-        """Log específico para sinais de compra"""
-        self.logger.info(f"📈 Sinal de COMPRA detectado - Preço: R$ {price:.2f}")
+    def log_position_signal(self, side: str, price: float):
+        """Log específico para sinais de posição"""
+        if side == "buy":
+            self.logger.info(f"📈 Sinal de COMPRA detectado - Preço: R$ {price:.2f}")
+        elif side == "sell":
+            self.logger.info(f"📉 Sinal de VENDA detectado - Preço: R$ {price:.2f}")
 
-    def log_sell_signal(self, price: float):
-        """Log específico para sinais de venda"""
-        self.logger.info(f"📉 Sinal de VENDA detectado - Preço: R$ {price:.2f}")
-
-    def log_buy_order(self, order_id: str, price: float, quantity: float):
-        """Log específico para ordens de compra"""
-        self.logger.info(
-            f"✅ Ordem de COMPRA executada ({order_id}) - Preço: R$ {price:.2f}, Quantidade: {quantity:.8f}"
-        )
-
-    def log_sell_order(self, order_id: str, price: float, quantity: float):
-        """Log específico para ordens de venda"""
-        self.logger.info(
-            f"✅ Ordem de VENDA executada ({order_id}) - Preço: R$ {price:.2f}, Quantidade: {quantity:.8f}"
-        )
+    def log_order_placed(self, order_id: str, side: str, price: float, quantity: float):
+        """Log específico para ordens colocadas"""
+        if side == "buy":
+            self.logger.info(
+                f"✅ Ordem de COMPRA executada ({order_id}) - Preço: R$ {price:.2f}, Quantidade: {quantity:.8f}"
+            )
+        elif side == "sell":
+            self.logger.info(
+                f"✅ Ordem de VENDA executada ({order_id}) - Preço: R$ {price:.2f}, Quantidade: {quantity:.8f}"
+            )
 
     def log_position(self, side: str, quantity: float, entry_price: float):
         """Log específico para posições"""
@@ -199,7 +197,7 @@ class TradingLogger:
         """Log específico para parada do bot"""
         self.logger.info("🛑 Bot parado")
 
-    def log_error(self, message: str, exception: Exception = None):
+    def log_error(self, message: str, exception: Exception | None = None):
         """Log específico para erros"""
         if exception:
             self.logger.error(f"❌ {message}: {str(exception)}")

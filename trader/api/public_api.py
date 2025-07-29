@@ -30,8 +30,8 @@ class MercadoBitcoinPublicAPI:
         )
 
     def _make_public_request(
-        self, method: str, endpoint: str, params: Dict[str, str] = None
-    ) -> Dict[str, Any]:
+        self, method: str, endpoint: str, params: Dict[str, str] | None = None
+    ) -> Any:
         """Faz requisição pública para a API (sem autenticação)"""
         url = f"{self.base_url}{endpoint}"
 
@@ -58,7 +58,9 @@ class MercadoBitcoinPublicAPI:
             "GET", "/tickers", params={"symbols": symbol}
         )
         ticker_list = [TickerData.from_dict(ticker) for ticker in response]
-        return ticker_list[0] if ticker_list else None
+        if not ticker_list:
+            raise Exception(f"Ticker para {symbol} não encontrado")
+        return ticker_list[0]
 
     def get_all_tickers(self) -> List[TickerData]:
         """
@@ -67,5 +69,5 @@ class MercadoBitcoinPublicAPI:
         Returns:
             List[TickerData]: Lista com todos os tickers
         """
-        response = self._make_public_request("GET", "/tickers")
+        response: list[dict[str, Any]] = self._make_public_request("GET", "/tickers")
         return [TickerData.from_dict(ticker) for ticker in response]

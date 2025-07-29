@@ -25,5 +25,12 @@ if ! uv run ruff format --check .; then
     exit 1
 fi
 
+# Verificar typing
+echo "🎨 Verificando tipagem..."
+if ! uv run pyright .; then
+    echo "❌ Código não está tipado corretamente. Execute 'make typing-check' para listar os problemas."
+    exit 1
+fi
+
 echo "✅ Todas as verificações passaram!"
 exit 0

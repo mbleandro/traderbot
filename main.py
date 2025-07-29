@@ -1,6 +1,5 @@
 import argparse
 import os
-from decimal import Decimal
 
 from dotenv import load_dotenv
 
@@ -8,7 +7,7 @@ from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.api.private_api import MercadoBitcoinPrivateAPI
 from trader.bot import TradingBot
-from trader.trading_strategy import PercentualPositionStrategy
+from trader.trading_strategy import IterationStrategy
 
 
 def main():
@@ -28,18 +27,12 @@ def main():
         "--fake", action="store_true", help="Utiliza API privada FAKE (default: False)"
     )
 
-    # argumentos para estratégia percentual-position
+    # argumentos para estratégia 'interation'
     parser.add_argument(
-        "--stop-loss-percentual",
+        "--sell-on-iteration",
         type=float,
         default=0,
-        help="Percentual de stop_loss (required if strategy = percentual-position",
-    )
-    parser.add_argument(
-        "--gain-treshold-percentual",
-        type=float,
-        default=0,
-        help="Percentual de threshold de ganho (required if strategy = percentual-position)",
+        help="Número de iterações para vender (required if strategy = interation)",
     )
 
     args = parser.parse_args()
@@ -61,20 +54,13 @@ def main():
     public_api = MercadoBitcoinPublicAPI()
 
     # Configurar estratégia
-    if args.strategy == "percentual-position":
-        if not args.stop_loss_percentual or not args.gain_treshold_percentual:
+    if args.strategy == "interation":
+        if not args.sell_on_iteration:
             print(
-                "Stop loss e gain treshold são argumentos obrigatórios para estratégia percentual-position"
+                "sell-on-iteration é um argumento obrigatório para estratégia 'interation'"
             )
             return
-        strategy = PercentualPositionStrategy(
-            percentual_stop_loss=Decimal(
-                str(round(args.stop_loss_percentual / 100, 2))
-            ),
-            percentual_gain_treshold=Decimal(
-                str(round(args.gain_treshold_percentual / 100, 2))
-            ),
-        )
+        strategy = IterationStrategy(sell_on_iteration=10)
     else:
         print("Estratégia não suportada")
         return
