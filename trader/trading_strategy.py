@@ -87,13 +87,21 @@ class SimpleMovingAverageStrategy(TradingStrategy):
 
 
 class IterationStrategy(TradingStrategy):
-    """Estratégia baseada em número de iterações"""
+    """
+    Estratégia baseada em número de iterações.
+
+    Compra na primeira oportunidade e vende após um número específico de iterações.
+    Utiliza 80% do saldo disponível para cada operação de compra.
+
+    Args:
+        sell_on_iteration (int): Número de iterações para vender
+    """
 
     def __init__(
         self,
         sell_on_iteration=5,
     ):
-        self.sell_on_iteration = sell_on_iteration
+        self.sell_on_iteration = int(sell_on_iteration)
         self.price_history = []
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:

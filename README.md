@@ -31,6 +31,22 @@ make install-dev
 ```bash
 make run
 ```
+Exemplo de execução para estratégia de iteração:
+```bash
+make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell-on-iteration=10 --fake'
+```
+
+## Opções
+Para ver as opções e argumentos disponíveis:
+```bash
+make run ARGS='--help'
+```
+
+Para ver as opções de uma estratégia específica:
+```bash
+make run ARGS='--strategy=<strategy_name> --help'
+```
+
 
 ## Linting e Formatação
 Este projeto usa **Ruff** como linter e formatter e **pyright** para verificação de tipos.
