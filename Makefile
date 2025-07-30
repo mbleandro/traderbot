@@ -32,24 +32,13 @@ clean: ## Remove arquivos temporários e cache
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py $(ARGS)
 
-lint: ## Executa verificação de código com Ruff
-	$(UV) run ruff check .
-
-lint-fix: ## Executa verificação e corrige automaticamente problemas com Ruff
-	$(UV) run ruff check --fix .
-
-typing-check: ## Executa verificação de typing com pyright
-	$(UV) run pyright .
+runfake: ## Executa o bot principal com API fake e estratégia burra
+	$(UV) run $(PYTHON) main.py --strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=3 --fake
 
 format: ## Formata o código com Ruff
-	$(UV) run ruff format .
-
-format-check: ## Verifica se o código está formatado corretamente
-	$(UV) run ruff format --check .
-
-ruff: ## Executa lint e format em sequência
 	$(UV) run ruff check --fix .
 	$(UV) run ruff format .
+	$(UV) run pyright ./trader/*
 
 setup-pre-commit: ## Configura hook de pré-commit para verificação automática
 	cp scripts/pre-commit.sh .git/hooks/pre-commit

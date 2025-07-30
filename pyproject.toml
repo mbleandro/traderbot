@@ -20,7 +20,7 @@ dev = [
     "pytest-mock>=3.12.0",
     "pytest-cov>=4.1.0",
     "ruff>=0.1.0",
-    "pyright==1.1.393",
+    "pyright>=1.1.403",
 ]
 
 [build-system]
@@ -37,7 +37,7 @@ testpaths = ["trader/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = ["-v", "--tb=short"]
+addopts = "-v --tb=short"
 
 # Configuração do Ruff
 [tool.ruff]
@@ -109,4 +109,6 @@ line-ending = "auto"
 [tool.ruff.lint.isort]
 known-first-party = ["trader"]
 
-
+[tool.pyright]
+include = ["trader/*"]
+typeCheckingMode = "basic"
