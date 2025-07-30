@@ -1,52 +1,42 @@
-import argparse
-import os
+import sys
 
 from dotenv import load_dotenv
 
+from trader import NotImplementedStrategy, get_strategy_cls
 from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.api.private_api import MercadoBitcoinPrivateAPI
 from trader.bot import TradingBot
-from trader.trading_strategy import IterationStrategy
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Execute bot")
+def main(
+    currency: str,
+    strategy_name: str,
+    interval: int,
+    fake: bool,
+    api_key: str | None,
+    api_secret: str | None,
+    **strategy_args,
+):
+    """
+    Função principal do trading bot.
 
-    # argumentos gerais
-    parser.add_argument(
-        "--currency", type=str, required=True, help="Moeda a ser negociada"
-    )
-    parser.add_argument(
-        "--strategy", type=str, required=True, help="Estratégia de trading a ser usada"
-    )
-    parser.add_argument(
-        "--interval", type=int, required=True, help="Intervalo de execução em segundos"
-    )
-    parser.add_argument(
-        "--fake", action="store_true", help="Utiliza API privada FAKE (default: False)"
-    )
-
-    # argumentos para estratégia 'iteration'
-    parser.add_argument(
-        "--sell-on-iteration",
-        type=float,
-        default=0,
-        help="Número de iterações para vender (required if strategy = iteration)",
-    )
-
-    args = parser.parse_args()
-    # Carregar variáveis do arquivo .env
-    load_dotenv()
-
+    Args:
+        --help              Mostra mensagem de ajuda
+        --currency          Par de moedas para negociar (ex: 'BTC-BRL')
+        --strategy_name     Nome da estratégia de trading a ser utilizada
+        --interval          Intervalo em segundos entre verificações de mercado
+        --fake              Se True, usa API fake para simulação; se False, usa API real
+        --api_key           Chave da API do Mercado Bitcoin (obrigatória se fake=False)
+        --api_secret        Segredo da API do Mercado Bitcoin (obrigatório se fake=False)
+        **strategy_args     Argumentos específicos da estratégia selecionada (execute main.py --strategy_name=<nome> --help para mais informações)
+    """
     # Configurar credenciais (use variáveis de ambiente)
-    if args.fake:
+    if fake:
         account_api = FakeMercadoBitcoinPrivateAPI()
     else:
-        api_key = os.getenv("MB_API_KEY")
-        api_secret = os.getenv("MB_API_SECRET")
         if not api_key or not api_secret:
-            print("Configure as variáveis MB_API_KEY e MB_API_SECRET")
+            print("Argumentos api_key e api_secret são obrigatórios se fake=False")
             return
         account_api = MercadoBitcoinPrivateAPI(api_key, api_secret)
 
@@ -54,28 +44,61 @@ def main():
     public_api = MercadoBitcoinPublicAPI()
 
     # Configurar estratégia
-    if args.strategy == "iteration":
-        if not args.sell_on_iteration:
-            print(
-                "sell-on-iteration é um argumento obrigatório para estratégia 'iteration'"
-            )
-            return
-        strategy = IterationStrategy(sell_on_iteration=10)
-    else:
-        print("Estratégia não suportada")
+    try:
+        strategy_cls = get_strategy_cls(strategy_name)
+    except NotImplementedStrategy:
+        print(f"Estratégia {strategy_name} não suportada")
         return
 
+    try:
+        strategy = strategy_cls(**strategy_args)
+    except ValueError as e:
+        print(f"Erro ao configurar estratégia: {e}")
+        return
     # Configurar conta
-    account = Account(account_api, args.currency)
+    account = Account(account_api, currency)
 
     # Criar e executar bot
     bot = TradingBot(public_api, strategy, account)
 
     try:
-        bot.run(interval=args.interval)
+        bot.run(interval=interval)
     except KeyboardInterrupt:
         bot.stop()
 
 
+def parse_kwargs(argv):
+    kwargs = {}
+
+    for arg in argv:
+        if arg.startswith("--"):
+            key_value = arg[2:].split("=", 1)
+            if len(key_value) == 2:
+                key, value = key_value
+                kwargs[key] = value
+            else:
+                kwargs[key_value[0]] = True  # flag booleana
+
+    return kwargs
+
+
+def _help(strategy: str | None = None, **kwargs):
+    if strategy:
+        try:
+            strategy_cls = get_strategy_cls(strategy)
+        except NotImplementedStrategy:
+            print(f"Estratégia {strategy} não suportada")
+            return
+        return print(strategy_cls.__doc__)
+    else:
+        return print(main.__doc__)
+
+
 if __name__ == "__main__":
-    main()
+    kwargs = parse_kwargs(sys.argv[1:])
+    load_dotenv()
+    print("args = ", kwargs)
+    if kwargs.get("help"):
+        _help(**kwargs)
+    else:
+        main(**kwargs)
