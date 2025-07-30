@@ -31,6 +31,7 @@ make install-dev
 ```bash
 make run
 ```
+Exemplo de execução para estratégia de iteração:
 ```bash
 make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell-on-iteration=10 --fake'
 ```
@@ -43,7 +44,7 @@ make run ARGS='--help'
 
 Para ver as opções de uma estratégia específica:
 ```bash
-make run ARGS='--strategy=iteration --help'
+make run ARGS='--strategy=<strategy_name> --help'
 ```
 
 
