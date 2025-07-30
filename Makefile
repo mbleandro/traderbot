@@ -1,4 +1,4 @@
-.PHONY: test test-verbose test-coverage install install-dev clean build help
+.PHONY: test test-verbose test-coverage install install-dev install-charts clean build help run charts
 
 # Variáveis
 PYTHON := python
@@ -14,6 +14,9 @@ install: ## Instala as dependências do projeto
 
 install-dev: ## Instala as dependências de desenvolvimento
 	$(UV) sync --extra dev
+
+install-charts: ## Instala as dependências para geração de gráficos
+	$(UV) sync --extra charts
 
 test: ## Executa os testes
 	$(UV) run $(PYTEST) .
@@ -31,6 +34,9 @@ clean: ## Remove arquivos temporários e cache
 
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py $(ARGS)
+
+charts: ## Gera gráficos dos dados de trading
+	$(UV) run $(PYTHON) charts_tools/generate_charts.py $(ARGS)
 
 lint: ## Executa verificação de código com Ruff
 	$(UV) run ruff check .

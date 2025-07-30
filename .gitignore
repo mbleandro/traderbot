@@ -12,3 +12,8 @@ wheels/
 .coverage
 .env
 .vscode/
+
+# Trading data files
+data/
+*.csv
+charts/

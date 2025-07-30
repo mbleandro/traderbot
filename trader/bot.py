@@ -4,6 +4,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
+from trader.persistence import BasePersistence
+
 from .account import Account
 from .api import MercadoBitcoinPublicAPI
 from .colored_logger import get_trading_logger
@@ -12,13 +14,18 @@ from .trading_strategy import TradingStrategy
 
 class TradingBot:
     def __init__(
-        self, api: MercadoBitcoinPublicAPI, strategy: TradingStrategy, account: Account
+        self,
+        api: MercadoBitcoinPublicAPI,
+        strategy: TradingStrategy,
+        persistence: BasePersistence,
+        account: Account,
     ):
         self.api = api
         self.strategy = strategy
         self.symbol = account.symbol
         self.is_running = False
         self.account = account
+        self.persistence = persistence
 
         # Rastreamento para análise de "hold strategy"
         self.first_position_entry_price: Optional[Decimal] = None
@@ -107,6 +114,17 @@ class TradingBot:
 
                 # Atualizar preço final para análise de hold strategy
                 self.final_price = current_price
+
+                # Salvar dados da iteração
+                self.persistence.save_iteration_data(
+                    timestamp=datetime.now(),
+                    symbol=self.symbol,
+                    current_price=current_price,
+                    position=self.account.get_position(),
+                    unrealized_pnl=unrealized_pnl,
+                    realized_pnl=total_pnl,
+                    position_signal=position_signal.side if position_signal else None,
+                )
 
                 time.sleep(interval)
 

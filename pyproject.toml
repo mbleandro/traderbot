@@ -22,6 +22,10 @@ dev = [
     "ruff>=0.1.0",
     "pyright==1.1.393",
 ]
+charts = [
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+]
 
 [build-system]
 requires = ["hatchling"]
