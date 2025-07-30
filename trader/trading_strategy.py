@@ -101,7 +101,7 @@ class IterationStrategy(TradingStrategy):
         self,
         sell_on_iteration=5,
     ):
-        self.sell_on_iteration = sell_on_iteration
+        self.sell_on_iteration = int(sell_on_iteration)
         self.price_history = []
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:

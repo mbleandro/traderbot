@@ -11,11 +11,11 @@ from trader.bot import TradingBot
 
 def main(
     currency: str,
-    strategy_name: str,
+    strategy: str,
     interval: int,
     fake: bool,
-    api_key: str | None,
-    api_secret: str | None,
+    api_key: str | None = None,
+    api_secret: str | None = None,
     **strategy_args,
 ):
     """
@@ -45,13 +45,13 @@ def main(
 
     # Configurar estratégia
     try:
-        strategy_cls = get_strategy_cls(strategy_name)
+        strategy_cls = get_strategy_cls(strategy)
     except NotImplementedStrategy:
-        print(f"Estratégia {strategy_name} não suportada")
+        print(f"Estratégia {strategy} não suportada")
         return
 
     try:
-        strategy = strategy_cls(**strategy_args)
+        strategy_obj = strategy_cls(**strategy_args)
     except ValueError as e:
         print(f"Erro ao configurar estratégia: {e}")
         return
@@ -59,10 +59,10 @@ def main(
     account = Account(account_api, currency)
 
     # Criar e executar bot
-    bot = TradingBot(public_api, strategy, account)
+    bot = TradingBot(public_api, strategy_obj, account)
 
     try:
-        bot.run(interval=interval)
+        bot.run(interval=int(interval))
     except KeyboardInterrupt:
         bot.stop()
 

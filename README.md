@@ -36,15 +36,14 @@ make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell-on-it
 ```
 
 ## Opções
+Para ver as opções e argumentos disponíveis:
 ```bash
-options:
-  -h, --help            show this help message and exit
-  --currency CURRENCY   Moeda a ser negociada
-  --strategy STRATEGY   Estratégia de trading a ser usada
-  --interval INTERVAL   Intervalo de execução em segundos
-  --fake                Utiliza API privada FAKE (default: False)
-  --sell-on-iteration SELL_ON_ITERATION
-                        Número de iterações para vender (required if strategy = interation)
+make run ARGS='--help'
+```
+
+Para ver as opções de uma estratégia específica:
+```bash
+make run ARGS='--strategy=iteration --help'
 ```
 
 
