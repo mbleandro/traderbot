@@ -58,8 +58,8 @@ def plot_price_chart(df: pd.DataFrame, symbol: str, output_file: str | None = No
                 linewidth=1,
             )
             # Adicionar anotação com o horário da operação
-            if hasattr(timestamp_val, 'strftime'):
-                time_str = cast(pd.Timestamp, timestamp_val).strftime('%H:%M:%S')
+            if hasattr(timestamp_val, "strftime"):
+                time_str = cast(pd.Timestamp, timestamp_val).strftime("%H:%M:%S")
             else:
                 time_str = "N/A"
             plt.annotate(
@@ -104,8 +104,8 @@ def plot_price_chart(df: pd.DataFrame, symbol: str, output_file: str | None = No
                 linewidth=1,
             )
             # Adicionar anotação com o horário da operação
-            if hasattr(timestamp_val, 'strftime'):
-                time_str = cast(pd.Timestamp, timestamp_val).strftime('%H:%M:%S')
+            if hasattr(timestamp_val, "strftime"):
+                time_str = cast(pd.Timestamp, timestamp_val).strftime("%H:%M:%S")
             else:
                 time_str = "N/A"
             plt.annotate(
