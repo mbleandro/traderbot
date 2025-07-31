@@ -33,7 +33,7 @@ make run
 ```
 Exemplo de execução para estratégia de iteração:
 ```bash
-make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell-on-iteration=10 --fake'
+make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=10 --fake'
 ```
 
 ## Opções

@@ -13,7 +13,7 @@ def main(
     currency: str,
     strategy: str,
     interval: int,
-    fake: bool,
+    fake: bool = False,
     api_key: str | None = None,
     api_secret: str | None = None,
     **strategy_args,
