@@ -291,8 +291,8 @@ def main():
     parser.add_argument(
         "--output-dir",
         "-o",
-        default="charts",
-        help="Diretório para salvar os gráficos (default: charts)",
+        default="report/charts",
+        help="Diretório para salvar os gráficos (default: report/charts)",
     )
     parser.add_argument(
         "--show",
@@ -305,7 +305,7 @@ def main():
 
     # Se o arquivo não existe no caminho atual, tentar na pasta data/
     csv_file = args.csv_file
-    if not os.path.exists(csv_file) and not csv_file.startswith("data/"):
+    if not os.path.exists(csv_file) and not csv_file.startswith("report/data/"):
         data_file = os.path.join("data", csv_file)
         if os.path.exists(data_file):
             csv_file = data_file

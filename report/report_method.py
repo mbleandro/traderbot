@@ -3,10 +3,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from .account import Position
+from trader.account import Position
 
 
-class BasePersistence:
+class BaseReport:
     """Classe base para persistência de dados do trading bot"""
 
     def __init__(self, currency: str = "BTC-BRL"):
@@ -26,7 +26,7 @@ class BasePersistence:
         raise NotImplementedError
 
 
-class NullPersistence(BasePersistence):
+class Nullreport(BaseReport):
     """Implementação de persistência que não salva dados (padrão)"""
 
     def save_iteration_data(
@@ -43,16 +43,16 @@ class NullPersistence(BasePersistence):
         pass
 
 
-class InFilePersistence(BasePersistence):
+class CsvReport(BaseReport):
     """Implementação de persistência em arquivo CSV"""
 
     def __init__(self, currency: str = "BTC-BRL"):
         # Criar diretório de dados se não existir
-        data_dir = "data"
+        data_dir = "report/data"
         os.makedirs(data_dir, exist_ok=True)
 
         # Configurar nome do arquivo baseado na moeda
-        filename = f"trading_data_{currency.replace('-', '_')}.csv"
+        filename = f"trading_data_{currency.replace('-', '_')}_{datetime.now().timestamp()}.csv"
         self.filename = os.path.join(data_dir, filename)
         self._ensure_file_exists()
 
@@ -103,23 +103,23 @@ class InFilePersistence(BasePersistence):
 
 
 # Mapeamento de persistências disponíveis
-PERSISTENCE_CLASSES = {
-    "null": NullPersistence,
-    "file": InFilePersistence,
+report_CLASSES = {
+    "null": Nullreport,
+    "csv": CsvReport,
 }
 
 
-def get_persistence_cls(persistence_name: str):
+def get_report_cls(report_name: str):
     """Retorna a classe de persistência baseada no nome"""
-    if persistence_name not in PERSISTENCE_CLASSES:
-        available = ", ".join(PERSISTENCE_CLASSES.keys())
+    if report_name not in report_CLASSES:
+        available = ", ".join(report_CLASSES.keys())
         raise ValueError(
-            f"Persistência '{persistence_name}' não encontrada. Disponíveis: {available}"
+            f"Persistência '{report_name}' não encontrada. Disponíveis: {available}"
         )
 
-    return PERSISTENCE_CLASSES[persistence_name]
+    return report_CLASSES[report_name]
 
 
-def list_persistence_options() -> list[str]:
+def list_report_options() -> list[str]:
     """Retorna lista de opções de persistência disponíveis"""
-    return list(PERSISTENCE_CLASSES.keys())
+    return list(report_CLASSES.keys())

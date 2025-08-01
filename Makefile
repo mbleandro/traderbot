@@ -36,7 +36,7 @@ run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py $(ARGS)
 
 charts: ## Gera gráficos dos dados de trading
-	$(UV) run $(PYTHON) charts_tools/generate_charts.py $(ARGS)
+	$(UV) run $(PYTHON) report/charts_tools/generate_charts.py $(ARGS)
 
 lint: ## Executa verificação de código com Ruff
 	$(UV) run ruff check .

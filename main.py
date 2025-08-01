@@ -2,12 +2,12 @@ import sys
 
 from dotenv import load_dotenv
 
+from report.report_method import get_report_cls
 from trader import NotImplementedStrategy, get_strategy_cls
 from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.api.private_api import MercadoBitcoinPrivateAPI
 from trader.bot import TradingBot
-from trader.persistence import get_persistence_cls
 
 
 def main(
@@ -15,7 +15,7 @@ def main(
     strategy: str,
     interval: int,
     fake: bool,
-    persistence: str = "null",
+    report: str = "null",
     api_key: str | None = None,
     api_secret: str | None = None,
     **strategy_args,
@@ -29,9 +29,9 @@ def main(
         --strategy          Nome da estratégia de trading a ser utilizada
         --interval          Intervalo em segundos entre verificações de mercado
         --fake              Se True, usa API fake para simulação; se False, usa API real
-        --persistence       Tipo de persistência de dados:
-                              - 'null' (padrão): Não salva dados
-                              - 'file': Salva dados em CSV na pasta data/
+        --report            Methodo de report:
+                              - 'null' (padrão): Não gera report
+                              - 'csv': Salva dados em CSV na pasta report/data/
         --api_key           Chave da API do Mercado Bitcoin (obrigatória se fake=False)
         --api_secret        Segredo da API do Mercado Bitcoin (obrigatório se fake=False)
         **strategy_args     Argumentos específicos da estratégia selecionada (execute main.py --strategy=<nome> --help para mais informações)
@@ -41,7 +41,7 @@ def main(
         python main.py --strategy=iteration --currency=BTC-BRL --interval=1 --fake
 
         # Execução salvando dados em CSV:
-        python main.py --strategy=iteration --currency=BTC-BRL --interval=1 --fake --persistence=file
+        python main.py --strategy=iteration --currency=BTC-BRL --interval=1 --fake --report=file
     """
     # Configurar credenciais (use variáveis de ambiente)
     if fake:
@@ -72,14 +72,14 @@ def main(
 
     # Configurar persistência
     try:
-        persistence_cls = get_persistence_cls(persistence)
-        persistence_obj = persistence_cls(currency)
+        report_cls = get_report_cls(report)
+        report_obj = report_cls(currency)
     except ValueError as e:
         print(f"Erro na configuração de persistência: {e}")
         return
 
     # Criar e executar bot
-    bot = TradingBot(public_api, strategy_obj, persistence_obj, account)
+    bot = TradingBot(public_api, strategy_obj, report_obj, account)
 
     try:
         bot.run(interval=int(interval))

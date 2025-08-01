@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from trader.persistence import BasePersistence
+from report.report_method import BaseReport
 
 from .account import Account
 from .api import MercadoBitcoinPublicAPI
@@ -17,7 +17,7 @@ class TradingBot:
         self,
         api: MercadoBitcoinPublicAPI,
         strategy: TradingStrategy,
-        persistence: BasePersistence,
+        report: BaseReport,
         account: Account,
     ):
         self.api = api
@@ -25,7 +25,7 @@ class TradingBot:
         self.symbol = account.symbol
         self.is_running = False
         self.account = account
-        self.persistence = persistence
+        self.report = report
 
         # Rastreamento para análise de "hold strategy"
         self.first_position_entry_price: Optional[Decimal] = None
@@ -116,7 +116,7 @@ class TradingBot:
                 self.final_price = current_price
 
                 # Salvar dados da iteração
-                self.persistence.save_iteration_data(
+                self.report.save_iteration_data(
                     timestamp=datetime.now(),
                     symbol=self.symbol,
                     current_price=current_price,
