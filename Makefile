@@ -54,6 +54,7 @@ format: ## Formata o código com Ruff
 	$(UV) run ruff check --fix .
 	$(UV) run ruff format .
 	$(UV) run pyright ./trader/*
+	$(UV) run pyright ./report/*
 
 setup-pre-commit: ## Configura hook de pré-commit para verificação automática
 	cp scripts/pre-commit.sh .git/hooks/pre-commit
