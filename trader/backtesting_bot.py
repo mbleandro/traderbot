@@ -69,7 +69,7 @@ class BacktestingBot:
                 position_signal = self.strategy.on_market_refresh(
                     current_price,
                     self.account.get_position(),
-                    self.account.position_history
+                    self.account.position_history,
                 )
 
                 if position_signal:
