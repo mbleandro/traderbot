@@ -140,13 +140,13 @@ def plot_price_chart(df: pd.DataFrame, symbol: str, output_file: str | None = No
         operation_times.extend(sell_signals["timestamp"].tolist())
 
     # Formatar eixo x para datas
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-    ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter(""))  # Remove os rótulos
+    ax.set_xticklabels([])  # Remove os textos do eixo X
 
     # Adicionar marcações menores para operações se houver
     if operation_times:
         # Adicionar localizador menor para mostrar operações
-        ax.xaxis.set_minor_locator(mdates.SecondLocator(bysecond=range(0, 60, 30)))
+        ax.xaxis.set_minor_locator(mdates.AutoDateLocator(maxticks=10))
         ax.xaxis.set_minor_formatter(mdates.DateFormatter(""))
 
         # Destacar os timestamps das operações
@@ -203,8 +203,8 @@ def plot_pnl_chart(df: pd.DataFrame, output_file: str | None = None):
 
     # Formatar eixo x para datas
     for ax in plt.gcf().get_axes():
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-        ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter(""))  # Remove os rótulos
+        ax.set_xticklabels([])  # Remove os textos do eixo X
         plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
     plt.tight_layout()
@@ -240,8 +240,8 @@ def plot_position_chart(df: pd.DataFrame, output_file: str | None = None):
     plt.grid(True, alpha=0.3)
 
     # Formatar eixo x para datas
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
-    plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%"))
+    # plt.gca().xaxis.set_major_locator(mdates.MinuteLocator(interval=5))
     plt.xticks(rotation=45)
 
     plt.tight_layout()
