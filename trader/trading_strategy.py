@@ -1,28 +1,19 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from decimal import Decimal
 
-from .account import Position, PositionHistory
-
-
-@dataclass
-class PositionSignal:
-    side: str
-    quantity: Decimal
+from .models import OrderSide, OrderSignal, Position
 
 
 class TradingStrategy(ABC):
     """Classe base para estratégias de trading"""
-
-    price_history: list[Decimal]
 
     @abstractmethod
     def on_market_refresh(
         self,
         market_price: Decimal,
         current_position: Position | None,
-        positionHistory: list[PositionHistory],
-    ) -> PositionSignal | None:
+        position_history: list[Position],
+    ) -> OrderSignal | None:
         pass
 
 
@@ -32,7 +23,7 @@ class SimpleMovingAverageStrategy(TradingStrategy):
     def __init__(self, short_period: int = 10, long_period: int = 30):
         self.short_period = short_period
         self.long_period = long_period
-        self.price_history = []
+        self.price_history: list[Decimal] = []
 
     def _calculate_sma(self, period: int) -> Decimal:
         """Calcula média móvel simples"""
@@ -69,20 +60,22 @@ class SimpleMovingAverageStrategy(TradingStrategy):
         self,
         market_price: Decimal,
         current_position: Position | None,
-        positionHistory: list[PositionHistory],
-    ) -> PositionSignal | None:
+        position_history: list[Position],
+    ) -> OrderSignal | None:
         self.price_history.append(market_price)
         if len(self.price_history) > self.long_period:
             self.price_history.pop(0)
 
         if not current_position:
             if self.should_buy(market_price):
-                return PositionSignal(
-                    "buy", self.calculate_quantity(Decimal("0.0"), market_price)
+                return OrderSignal(
+                    OrderSide.BUY, self.calculate_quantity(Decimal("0.0"), market_price)
                 )
         else:
             if self.should_sell(market_price, current_position):
-                return PositionSignal("sell", current_position.quantity)
+                return OrderSignal(
+                    OrderSide.SELL, current_position.entry_order.quantity
+                )
         return None
 
 
@@ -99,10 +92,12 @@ class IterationStrategy(TradingStrategy):
 
     def __init__(
         self,
+        buy_on_iteration=2,
         sell_on_iteration=5,
     ):
+        self.buy_on_iteration = int(buy_on_iteration)
         self.sell_on_iteration = int(sell_on_iteration)
-        self.price_history = []
+        self.price_history: list[Decimal] = []
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
         quantity = (balance * Decimal("0.8")) / price
@@ -112,15 +107,20 @@ class IterationStrategy(TradingStrategy):
         self,
         market_price: Decimal,
         current_position: Position | None,
-        positionHistory: list[PositionHistory],
-    ) -> PositionSignal | None:
+        position_history: list[Position],
+    ) -> OrderSignal | None:
         self.price_history.append(market_price)
         if not current_position:
-            return PositionSignal(
-                "buy", self.calculate_quantity(Decimal("10000.0"), market_price)
-            )
+            if len(self.price_history) > self.buy_on_iteration:
+                self.price_history = []
+                return OrderSignal(
+                    OrderSide.BUY,
+                    self.calculate_quantity(Decimal("10000.0"), market_price),
+                )
         else:
             if len(self.price_history) > self.sell_on_iteration:
                 self.price_history = []
-                return PositionSignal("sell", current_position.quantity)
+                return OrderSignal(
+                    OrderSide.SELL, current_position.entry_order.quantity
+                )
         return None

@@ -1,5 +1,6 @@
 import logging
 import sys
+from decimal import Decimal
 
 from colorama import Back, Fore, Style, init
 
@@ -147,23 +148,13 @@ class TradingLogger:
         )
         self.logger.info(f"💰 Preço atual {symbol}: R$ {price:.2f}")
 
-    def log_position_signal(self, side: str, price: float):
-        """Log específico para sinais de posição"""
-        if side == "buy":
-            self.logger.info(f"📈 Sinal de COMPRA detectado - Preço: R$ {price:.2f}")
-        elif side == "sell":
-            self.logger.info(f"📉 Sinal de VENDA detectado - Preço: R$ {price:.2f}")
-
-    def log_order_placed(self, order_id: str, side: str, price: float, quantity: float):
+    def log_order_placed(
+        self, order_id: str, side: str, price: Decimal, quantity: Decimal
+    ):
         """Log específico para ordens colocadas"""
-        if side == "buy":
-            self.logger.info(
-                f"✅ Ordem de COMPRA executada ({order_id}) - Preço: R$ {price:.2f}, Quantidade: {quantity:.8f}"
-            )
-        elif side == "sell":
-            self.logger.info(
-                f"✅ Ordem de VENDA executada ({order_id}) - Preço: R$ {price:.2f}, Quantidade: {quantity:.8f}"
-            )
+        self.logger.info(
+            f"✅ Ordem de {side.upper()} executada ({order_id}) - Preço: R$ {price:.2f}, Quantidade: {quantity:.8f}"
+        )
 
     def log_position(self, side: str, quantity: float, entry_price: float):
         """Log específico para posições"""
@@ -171,17 +162,13 @@ class TradingLogger:
             f"📊 Posição atual: {side.upper()} {quantity:.8f} @ R$ {entry_price:.2f}"
         )
 
-    def log_pnl(self, unrealized_pnl: float, realized_pnl: float):
-        """Log específico para PnL"""
-        unrealized_emoji = "📈" if unrealized_pnl >= 0 else "📉"
-        realized_emoji = "💰" if realized_pnl >= 0 else "💸"
+    def log_realized_pnl(self, pnl: float):
+        realized_emoji = "💰" if pnl >= 0 else "💸"
+        self.logger.info(f"{realized_emoji} PnL total realizado: R$ {pnl:.2f}")
 
-        self.logger.info(
-            f" ↳ {unrealized_emoji} PnL não realizado: R$ {unrealized_pnl:.2f}"
-        )
-        self.logger.info(
-            f" ↳ {realized_emoji} PnL total realizado: R$ {realized_pnl:.2f}"
-        )
+    def log_unrealized_pnl(self, pnl: float):
+        unrealized_emoji = "📈" if pnl >= 0 else "📉"
+        self.logger.info(f"{unrealized_emoji} PnL não realizado: R$ {pnl:.2f}")
 
     def log_balance(self, brl_balance: float, btc_balance: float):
         """Log específico para saldos"""

@@ -61,7 +61,7 @@ class CsvReport(BaseReport):
         if not os.path.exists(self.filename):
             with open(self.filename, "w") as f:
                 f.write(
-                    "timestamp,symbol,price,position_side,position_quantity,position_entry_price,unrealized_pnl,realized_pnl,signal\n"
+                    "timestamp,symbol,price,position_type,position_quantity,position_entry_price,unrealized_pnl,realized_pnl,signal\n"
                 )
 
     def save_iteration_data(
@@ -75,9 +75,9 @@ class CsvReport(BaseReport):
         position_signal: Optional[str] = None,
     ) -> None:
         """Salva dados da iteração em arquivo CSV"""
-        position_side = position.side if position else ""
-        position_quantity = position.quantity if position else Decimal("0")
-        position_entry_price = position.entry_price if position else Decimal("0")
+        position_type = position.type if position else ""
+        position_quantity = position.entry_order.quantity if position else Decimal("0")
+        position_entry_price = position.entry_order.price if position else Decimal("0")
         signal = position_signal or ""
 
         # Arredondar valores monetários para 2 casas decimais
@@ -90,7 +90,7 @@ class CsvReport(BaseReport):
             f"{timestamp.isoformat()},"
             f"{symbol},"
             f"{current_price_rounded:.2f},"
-            f"{position_side},"
+            f"{position_type},"
             f"{position_quantity},"
             f"{position_entry_price_rounded:.2f},"
             f"{unrealized_pnl_rounded:.2f},"

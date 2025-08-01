@@ -1,61 +1,12 @@
-from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from enum import StrEnum, auto
-from typing import List, Optional
+from typing import List
+
+from trader.models.order import Order, OrderSignal
 
 from .api.private_api import MercadoBitcoinPrivateAPIBase
 from .colored_logger import get_trading_logger
-
-
-class Sides(StrEnum):
-    LONG = auto()
-    SHORT = auto()
-
-
-@dataclass
-class Position:
-    """Representa uma posição de trading"""
-
-    order_id: str
-    symbol: str
-    side: Sides
-    quantity: Decimal
-    entry_price: Decimal
-    entry_time: datetime
-    current_price: Optional[Decimal] = None
-
-    @property
-    def unrealized_pnl(self) -> Decimal:
-        """Calcula o PnL não realizado"""
-        if self.current_price is None:
-            return Decimal("0.0")
-
-        if self.side == Sides.LONG:
-            return (self.current_price - self.entry_price) * self.quantity
-        else:  # short
-            return (self.entry_price - self.current_price) * self.quantity
-
-    @property
-    def is_profitable(self) -> bool:
-        """Verifica se a posição está lucrativa"""
-        return self.unrealized_pnl > 0
-
-
-@dataclass
-class PositionHistory:
-    """Representa o histórico de uma posição fechada"""
-
-    entry_order_id: str
-    exit_order_id: str
-    symbol: str
-    side: str
-    quantity: Decimal
-    entry_price: Decimal
-    exit_price: Decimal
-    entry_time: datetime
-    exit_time: datetime
-    realized_pnl: Decimal
+from .models import OrderSide, Position, PositionType
 
 
 class Account:
@@ -65,8 +16,9 @@ class Account:
         self.api = api
         self.symbol = symbol
         self.account_id = self.get_api_account_id("BRL")
-        self.current_position: Optional[Position] = None
-        self.position_history: List[PositionHistory] = []
+        self.current_position: Position | None = None
+        self.position_history: List[Position] = []
+        self.order_history: List[OrderSignal] = []
 
         # Configurar logging colorido
         self.trading_logger = get_trading_logger("Account")
@@ -94,7 +46,10 @@ class Account:
     def can_buy(self) -> bool:
         """Verifica se é possível executar uma compra"""
         # Não pode comprar se já tem posição long
-        if self.current_position is not None and self.current_position.side == "long":
+        if (
+            self.current_position is not None
+            and self.current_position.type == PositionType.LONG
+        ):
             return False
         # Verifica se tem saldo suficiente em BRL
         brl_balance = self.get_balance("BRL")
@@ -103,93 +58,66 @@ class Account:
     def can_sell(self) -> bool:
         """Verifica se é possível executar uma venda"""
         # Só pode vender se tem posição long
-        if self.current_position is None or self.current_position.side != "long":
+        if (
+            self.current_position is None
+            or self.current_position.type != PositionType.LONG
+        ):
             return False
 
         # Verifica se tem BTC suficiente
         btc_balance = self.get_balance("BTC")
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
-    def place_order(self, price: Decimal, side: str, quantity: Decimal) -> bool:
+    def place_order(self, price: Decimal, side: OrderSide, quantity: Decimal) -> Order:
         """Coloca uma ordem de compra/venda"""
 
-        if side == "buy" and not self.can_buy():
+        if side == OrderSide.BUY and not self.can_buy():
             self.trading_logger.log_warning("Não é possível executar compra no momento")
-            return False
-        if side == "sell" and not self.can_sell():
+            raise ValueError("Não é possível executar compra no momento")
+        if side == OrderSide.SELL and not self.can_sell():
             self.trading_logger.log_warning("Não é possível executar venda no momento")
-            return False
+            raise ValueError("Não é possível executar compra no momento")
 
         try:
             order_id = self.api.place_order(
                 account_id=self.account_id,
                 symbol=self.symbol,
-                side=side,
+                side=str(side),
                 type_order="market",
                 quantity=str(quantity),
             )
-            if side == "buy":
+            order = Order(
+                order_id=order_id,
+                symbol=self.symbol,
+                quantity=quantity,
+                price=price,
+                side=side,
+                time=datetime.now(),
+            )
+            if not self.current_position:
                 # Criar nova posição
                 self.current_position = Position(
-                    order_id=order_id,
-                    symbol=self.symbol,
-                    side=Sides.LONG,
-                    quantity=quantity,
-                    entry_price=price,
-                    entry_time=datetime.now(),
-                    current_price=price,
+                    type=PositionType.LONG,
+                    entry_order=order,
+                    exit_order=None,
                 )
-
-            # Calcular PnL e adicionar ao histórico
-            if side == "sell" and self.current_position:
-                current_price = self.current_position.current_price or Decimal("0.0")
-                realized_pnl = (
-                    current_price - self.current_position.entry_price
-                ) * self.current_position.quantity
-                position_history = PositionHistory(
-                    entry_order_id=self.current_position.order_id,
-                    exit_order_id=order_id,
-                    symbol=self.current_position.symbol,
-                    side=self.current_position.side,
-                    quantity=self.current_position.quantity,
-                    entry_price=self.current_position.entry_price,
-                    exit_price=current_price,
-                    entry_time=self.current_position.entry_time,
-                    exit_time=datetime.now(),
-                    realized_pnl=realized_pnl,
-                )
-
-                self.position_history.append(position_history)
-
-                # Log colorido baseado no resultado
-                if realized_pnl > 0:
-                    self.logger.info(
-                        f"💰 Posição fechada com LUCRO - PnL: R$ {realized_pnl:.2f}"
-                    )
-                else:
-                    self.logger.info(
-                        f"💸 Posição fechada com PREJUÍZO - PnL: R$ {realized_pnl:.2f}"
-                    )
-
-                # Limpar posição atual
+                self.position_history.append(self.current_position)
+            else:
+                self.current_position.exit_order = order
                 self.current_position = None
-            return True
+
+            return order
 
         except Exception as e:
             self.trading_logger.log_error("Erro ao executar compra", e)
-            return False
-
-    def update_position_price(self, current_price: Decimal):
-        """Atualiza o preço atual da posição"""
-        if self.current_position:
-            self.current_position.current_price = current_price
+            raise
 
     def get_total_realized_pnl(self) -> Decimal:
         """Retorna o PnL total realizado"""
         return Decimal(str(sum(pos.realized_pnl for pos in self.position_history)))
 
-    def get_unrealized_pnl(self) -> Decimal:
+    def get_unrealized_pnl(self, current_price: Decimal) -> Decimal:
         """Retorna o PnL não realizado da posição atual"""
         if self.current_position:
-            return self.current_position.unrealized_pnl
+            return self.current_position.unrealized_pnl(current_price)
         return Decimal("0.0")
