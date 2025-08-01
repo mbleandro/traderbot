@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
 import os
+from abc import ABC, abstractmethod
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
@@ -10,6 +10,7 @@ from trader.account import Position
 class BaseReport(ABC):
     """Classe base para persistência de dados do trading bot"""
 
+    @abstractmethod
     def __init__(self, currency: str = "BTC-BRL"):
         pass
 
