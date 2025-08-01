@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Script para gerar gráficos a partir dos dados de trading salvos em CSV.
 """
