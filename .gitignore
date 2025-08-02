@@ -8,7 +8,13 @@ wheels/
 
 # Virtual environments
 .venv
+uv.lock
 
 .coverage
 .env
 .vscode/
+
+# Trading data files
+report/data/
+*.csv
+report/charts/

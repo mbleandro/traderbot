@@ -1,6 +1,9 @@
 import time
 import traceback
+from datetime import datetime
 from decimal import Decimal
+
+from report.report_method import BaseReport
 
 from .account import Account
 from .api import MercadoBitcoinPublicAPI
@@ -11,13 +14,18 @@ from .trading_strategy import TradingStrategy
 
 class TradingBot:
     def __init__(
-        self, api: MercadoBitcoinPublicAPI, strategy: TradingStrategy, account: Account
+        self,
+        api: MercadoBitcoinPublicAPI,
+        strategy: TradingStrategy,
+        report: BaseReport,
+        account: Account,
     ):
         self.api = api
         self.strategy = strategy
         self.symbol = account.symbol
         self.is_running = False
         self.account = account
+        self.report = report
 
         self.price_history: list[Decimal] = []
         self.last_position: Position | None = None
@@ -89,6 +97,17 @@ class TradingBot:
                     self.trading_logger.log_unrealized_pnl(float(unrealized_pnl))
                 total_pnl = self.account.get_total_realized_pnl()
                 self.trading_logger.log_realized_pnl(float(total_pnl))
+
+                # Salvar dados da iteração
+                self.report.save_iteration_data(
+                    timestamp=datetime.now(),
+                    symbol=self.symbol,
+                    current_price=current_price,
+                    position=self.account.get_position(),
+                    unrealized_pnl=unrealized_pnl,
+                    realized_pnl=total_pnl,
+                    position_signal=position_signal.side if position_signal else None,
+                )
 
                 time.sleep(interval)
 

@@ -1,4 +1,4 @@
-.PHONY: test test-verbose test-coverage install install-dev clean build help
+.PHONY: test test-verbose test-coverage install install-dev install-charts clean build help run charts
 
 # Variáveis
 PYTHON := python
@@ -14,6 +14,9 @@ install: ## Instala as dependências do projeto
 
 install-dev: ## Instala as dependências de desenvolvimento
 	$(UV) sync --extra dev
+
+install-charts: ## Instala as dependências para geração de gráficos
+	$(UV) sync --extra charts
 
 test: ## Executa os testes
 	$(UV) run $(PYTEST) .
@@ -32,6 +35,18 @@ clean: ## Remove arquivos temporários e cache
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py $(ARGS)
 
+charts: ## Gera gráficos dos dados de trading
+	$(UV) run $(PYTHON) report/charts_tools/generate_charts.py $(ARGS)
+
+lint: ## Executa verificação de código com Ruff
+	$(UV) run ruff check .
+
+lint-fix: ## Executa verificação e corrige automaticamente problemas com Ruff
+	$(UV) run ruff check --fix .
+
+typing-check: ## Executa verificação de typing com pyright
+	$(UV) run pyright .
+
 runfake: ## Executa o bot principal com API fake e estratégia burra
 	$(UV) run $(PYTHON) main.py --strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=3 --fake
 
@@ -39,6 +54,7 @@ format: ## Formata o código com Ruff
 	$(UV) run ruff check --fix .
 	$(UV) run ruff format .
 	$(UV) run pyright ./trader/*
+	$(UV) run pyright ./report/*
 
 setup-pre-commit: ## Configura hook de pré-commit para verificação automática
 	cp scripts/pre-commit.sh .git/hooks/pre-commit
