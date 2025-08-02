@@ -61,7 +61,7 @@ make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_it
 
 2. **Execução salvando dados em CSV:**
 ```bash
-make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=10 --fake --persistence=file'
+make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=10 --fake --report=file'
 ```
 
 ## Opções
@@ -76,8 +76,8 @@ make run ARGS='--strategy=<strategy_name> --help'
 ```
 
 ### Opções de Persistência
-- `--persistence=null` (padrão): Não salva dados
-- `--persistence=file`: Salva dados em arquivo CSV na pasta `data/`
+- `--report=null` (padrão): Não salva dados
+- `--report=file`: Salva dados em arquivo CSV na pasta `data/`
 
 ## Geração de Gráficos
 
@@ -103,7 +103,7 @@ make install
 make install-charts
 
 # 2. Executar o bot salvando dados
-make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=10 --fake --persistence=file'
+make run ARGS='--strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=10 --fake --report=file'
 
 # 3. Gerar gráficos
 make charts ARGS="trading_data_BTC_BRL.csv"

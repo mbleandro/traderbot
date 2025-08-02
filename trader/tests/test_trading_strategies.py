@@ -6,7 +6,8 @@ Validam comportamento de compra e venda com mínimo de mocking.
 from datetime import datetime
 from decimal import Decimal
 
-from trader.account import Position, Sides
+from trader.models import Position, PositionType
+from trader.models.order import Order, OrderSide
 from trader.trading_strategy import (
     SimpleMovingAverageStrategy,
 )
@@ -17,19 +18,21 @@ order_counter = 1
 def create_position(
     quantity: Decimal = Decimal("0.1"),
     entry_price: Decimal = Decimal("100.0"),
-    current_price: Decimal | None = None,
 ) -> Position:
     """Helper para criar posições de teste"""
     global order_counter
     order_counter += 1
     return Position(
-        order_id=f"test-order-{order_counter}",
-        symbol="BTC-BRL",
-        side=Sides.LONG,
-        quantity=quantity,
-        entry_price=entry_price,
-        entry_time=datetime.now(),
-        current_price=current_price or entry_price,
+        type=PositionType.LONG,
+        entry_order=Order(
+            order_id=f"test-order-{order_counter}",
+            symbol="BTC-BRL",
+            quantity=quantity,
+            price=entry_price,
+            side=OrderSide.BUY,
+            time=datetime.now(),
+        ),
+        exit_order=None,
     )
 
 

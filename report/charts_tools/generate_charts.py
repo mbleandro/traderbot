@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Script para gerar gráficos a partir dos dados de trading salvos em CSV.
 """
@@ -223,9 +222,9 @@ def plot_position_chart(df: pd.DataFrame, output_file: str | None = None):
     # Criar dados para o gráfico de posições
     position_data = []
     for _, row in df.iterrows():
-        if row["position_side"] == "long":
+        if row["position_type"] == "long":
             position_data.append(1)
-        elif row["position_side"] == "short":
+        elif row["position_type"] == "short":
             position_data.append(-1)
         else:
             position_data.append(0)
@@ -291,8 +290,8 @@ def main():
     parser.add_argument(
         "--output-dir",
         "-o",
-        default="charts",
-        help="Diretório para salvar os gráficos (default: charts)",
+        default="report/charts",
+        help="Diretório para salvar os gráficos (default: report/charts)",
     )
     parser.add_argument(
         "--show",
@@ -305,7 +304,7 @@ def main():
 
     # Se o arquivo não existe no caminho atual, tentar na pasta data/
     csv_file = args.csv_file
-    if not os.path.exists(csv_file) and not csv_file.startswith("data/"):
+    if not os.path.exists(csv_file) and not csv_file.startswith("report/data/"):
         data_file = os.path.join("data", csv_file)
         if os.path.exists(data_file):
             csv_file = data_file

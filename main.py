@@ -3,22 +3,22 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
+from report.report_method import get_report_cls
 from trader import NotImplementedStrategy, get_strategy_cls
 from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.api.private_api import MercadoBitcoinPrivateAPI
-from trader.backtesting_bot import BacktestingBot
-from trader.bot import TradingBot
-from trader.persistence import get_persistence_cls
+from trader.backtesting.bot import BacktestingBot
+from trader.trading.bot import TradingBot
 
 
 def main(
     currency: str,
     strategy: str,
     interval: int,
-    persistence: str = "null",
     fake: bool = False,
     backtest: bool = False,
+    report: str = "null",
     api_key: str | None = None,
     api_secret: str | None = None,
     start_date: str | None = None,
@@ -35,9 +35,9 @@ def main(
         --interval          Intervalo em segundos entre verificações de mercado
         --fake              Se True, usa API fake para simulação; se False, usa API real
         --backtest          Se True, executa backtesting em vez de trading real
-        --persistence       Tipo de persistência de dados:
-                              - 'null' (padrão): Não salva dados
-                              - 'file': Salva dados em CSV na pasta data/
+        --report            Methodo de report:
+                              - 'null' (padrão): Não gera report
+                              - 'csv': Salva dados em CSV na pasta report/data/
         --api_key           Chave da API do Mercado Bitcoin (obrigatória se fake=False)
         --api_secret        Segredo da API do Mercado Bitcoin (obrigatório se fake=False)
         --start_date        Data de início do backtesting (obrigatório se backtest=True)
@@ -49,10 +49,10 @@ def main(
         python main.py --strategy=iteration --currency=BTC-BRL --interval=1 --fake
 
         # Execução salvando dados em CSV:
-        python main.py --strategy=iteration --currency=BTC-BRL --interval=1 --fake --persistence=file
+        python main.py --strategy=iteration --currency=BTC-BRL --interval=1 --fake --report=file
     """
     # Configurar credenciais (use variáveis de ambiente)
-    if fake:
+    if fake or backtest:
         account_api = FakeMercadoBitcoinPrivateAPI()
     else:
         if not api_key or not api_secret:
@@ -80,14 +80,14 @@ def main(
 
     # Configurar persistência
     try:
-        persistence_cls = get_persistence_cls(persistence)
-        persistence_obj = persistence_cls(currency)
+        report_cls = get_report_cls(report)
+        report_obj = report_cls(currency)
     except ValueError as e:
         print(f"Erro na configuração de persistência: {e}")
         return
 
     if backtest:
-        bot = BacktestingBot(public_api, strategy_obj, persistence_obj, account)
+        bot = BacktestingBot(public_api, strategy_obj, report_obj, account)
         if not start_date or not end_date:
             print("Datas de início e fim são obrigatórias para backtesting")
             return
@@ -102,7 +102,7 @@ def main(
         except KeyboardInterrupt:
             bot.stop()
     else:
-        bot = TradingBot(public_api, strategy_obj, persistence_obj, account)
+        bot = TradingBot(public_api, strategy_obj, report_obj, account)
         try:
             bot.run(interval=int(interval))
         except KeyboardInterrupt:
