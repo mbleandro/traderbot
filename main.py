@@ -143,4 +143,19 @@ if __name__ == "__main__":
     if kwargs.get("help"):
         _help(kwargs.get("strategy"))
     else:
-        main(**kwargs)
+        # Separar argumentos específicos do main dos argumentos da estratégia
+        main_args = {
+            "currency": kwargs.pop("currency", None),
+            "strategy": kwargs.pop("strategy", None),
+            "interval": kwargs.pop("interval", None),
+            "fake": kwargs.pop("fake", False),
+            "backtest": kwargs.pop("backtest", False),
+            "report": kwargs.pop("report", "null"),
+            "api_key": kwargs.pop("api_key", None),
+            "api_secret": kwargs.pop("api_secret", None),
+            "start_date": kwargs.pop("start-date", None),
+            "end_date": kwargs.pop("end-date", None),
+        }
+        # Os argumentos restantes são para a estratégia
+        main_args.update(kwargs)  # strategy_args
+        main(**main_args)

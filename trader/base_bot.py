@@ -19,6 +19,7 @@ class BaseBot(ABC):
         strategy: TradingStrategy,
         report: BaseReport,
         account: Account,
+        enable_logging: bool = True,
     ):
         self.api = api
         self.strategy = strategy
@@ -31,7 +32,9 @@ class BaseBot(ABC):
         self.last_position: Position | None = None
 
         # Configurar logging colorido
-        self.trading_logger = get_trading_logger(self.__class__.__name__)
+        self.trading_logger = get_trading_logger(
+            self.__class__.__name__, enable_logging
+        )
         self.logger = self.trading_logger.get_logger()
 
     @abstractmethod
