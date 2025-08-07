@@ -1,6 +1,5 @@
 import traceback
 from datetime import datetime
-from decimal import Decimal
 from enum import Enum
 
 from trader.base_bot import BaseBot
@@ -58,8 +57,7 @@ class BacktestingBot(BaseBot):
         # Inicializar barra de progresso
         log_progress_bar(0.0, overwrite=False)
 
-        for index, str_price in enumerate(candles.close):
-            current_price = Decimal(str_price)
+        for index, current_price in enumerate(candles.close):
             try:
                 timestamp = datetime.fromtimestamp(candles.timestamp[index])
 
