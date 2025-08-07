@@ -57,12 +57,13 @@ class BacktestingBot(BaseBot):
         # Inicializar barra de progresso
         log_progress_bar(0.0, overwrite=False)
 
-        for index, current_price in enumerate(candles.close):
+        for index in range(len(candles.close)):
+            current_ticker = candles.get_ticker_from_index(index)
             try:
                 timestamp = datetime.fromtimestamp(candles.timestamp[index])
 
                 # Usar método da classe base para processar dados de mercado
-                self.process_market_data(current_price, timestamp)
+                self.process_market_data(current_ticker, timestamp)
 
                 # Atualizar barra de progresso
                 progress_percent = ((index + 1) / total_candles) * 100

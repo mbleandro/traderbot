@@ -60,3 +60,17 @@ class Candles:
             volume=[Decimal(v) for v in data["v"]],
             timestamp=data["t"],
         )
+
+    def get_ticker_from_index(self, index: int) -> TickerData:
+        """Cria um TickerData a partir de um candle de índice `index`"""
+        return TickerData(
+            buy=self.close[index],
+            date=self.timestamp[index],
+            high=self.high[index],
+            last=self.close[index],
+            low=self.low[index],
+            open=self.open[index],
+            pair="BTC-BRL",
+            sell=self.close[index],
+            vol=self.volume[index],
+        )

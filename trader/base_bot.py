@@ -7,6 +7,7 @@ from trader.account import Account
 from trader.api import MercadoBitcoinPublicAPI
 from trader.colored_logger import get_trading_logger
 from trader.models.position import Position
+from trader.models.public_data import TickerData
 from trader.trading_strategy import TradingStrategy
 
 
@@ -43,20 +44,21 @@ class BaseBot(ABC):
         pass
 
     def process_market_data(
-        self, current_price: Decimal, timestamp: datetime | None = None
+        self, current_ticker: TickerData, timestamp: datetime | None = None
     ):
         """Processa dados de mercado e executa lógica de trading comum"""
-        self.price_history.append(current_price)
+        self.price_history.append(current_ticker.last)
 
         position_signal = self.strategy.on_market_refresh(
-            current_price,
+            current_ticker,
+            self.account.get_balance("BRL"),
             self.account.get_position(),
             self.account.position_history,
         )
 
         if position_signal:
             order = self.account.place_order(
-                current_price,
+                current_ticker.last,
                 position_signal.side,
                 position_signal.quantity,
             )
@@ -92,7 +94,7 @@ class BaseBot(ABC):
 
         # Log de PnL
         unrealized_pnl = (
-            position.unrealized_pnl(current_price) if position else Decimal("0.0")
+            position.unrealized_pnl(current_ticker.last) if position else Decimal("0.0")
         )
         if position:
             self.trading_logger.log_unrealized_pnl(float(unrealized_pnl))
@@ -104,7 +106,7 @@ class BaseBot(ABC):
         self.report.save_iteration_data(
             timestamp=timestamp or datetime.now(),
             symbol=self.symbol,
-            current_price=current_price,
+            current_price=current_ticker.last,
             position=self.account.get_position(),
             unrealized_pnl=unrealized_pnl,
             realized_pnl=total_pnl,
