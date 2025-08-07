@@ -1,5 +1,4 @@
 import sys
-from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -21,8 +20,8 @@ def main(
     report: str = "null",
     api_key: str | None = None,
     api_secret: str | None = None,
-    start_date: str | None = None,
-    end_date: str | None = None,
+    start_datetime: str | None = None,
+    end_datetime: str | None = None,
     **strategy_args,
 ):
     """
@@ -40,8 +39,8 @@ def main(
                               - 'csv': Salva dados em CSV na pasta report/data/
         --api_key           Chave da API do Mercado Bitcoin (obrigatória se fake=False)
         --api_secret        Segredo da API do Mercado Bitcoin (obrigatório se fake=False)
-        --start_date        Data de início do backtesting (obrigatório se backtest=True)
-        --end_date          Data de fim do backtesting (obrigatório se backtest=True)
+        --start_datetime        Data de início do backtesting (obrigatório se backtest=True)
+        --end_datetime          Data de fim do backtesting (obrigatório se backtest=True)
         **strategy_args     Argumentos específicos da estratégia selecionada (execute main.py --strategy=<nome> --help para mais informações)
 
     Exemplos:
@@ -87,26 +86,16 @@ def main(
         return
 
     if backtest:
-        bot = BacktestingBot(public_api, strategy_obj, report_obj, account)
-        if not start_date or not end_date:
-            print("Datas de início e fim são obrigatórias para backtesting")
-            return
-        try:
-            start_date_datetime = datetime.fromisoformat(start_date)
-            end_date_datetime = datetime.fromisoformat(end_date)
-        except ValueError:
-            print("Datas de início e fim devem ser no formato ISO 8601")
-            return
-        try:
-            bot.run(start_date_datetime, end_date_datetime, interval=int(interval))
-        except KeyboardInterrupt:
-            bot.stop()
+        bot = BacktestingBot(
+            public_api, strategy_obj, report_obj, account, start_datetime, end_datetime
+        )
     else:
         bot = TradingBot(public_api, strategy_obj, report_obj, account)
-        try:
-            bot.run(interval=int(interval))
-        except KeyboardInterrupt:
-            bot.stop()
+
+    try:
+        bot.run(interval=int(interval))
+    except KeyboardInterrupt:
+        bot.stop()
 
 
 def parse_kwargs(argv):
@@ -153,8 +142,8 @@ if __name__ == "__main__":
             "report": kwargs.pop("report", "null"),
             "api_key": kwargs.pop("api_key", None),
             "api_secret": kwargs.pop("api_secret", None),
-            "start_date": kwargs.pop("start-date", None),
-            "end_date": kwargs.pop("end-date", None),
+            "start_datetime": kwargs.pop("start-date", None),
+            "end_datetime": kwargs.pop("end-date", None),
         }
         # Os argumentos restantes são para a estratégia
         main_args.update(kwargs)  # strategy_args
