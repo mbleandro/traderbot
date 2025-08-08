@@ -1,4 +1,4 @@
-from .trading_strategy import IterationStrategy, TradingStrategy
+from .trading_strategy import IterationStrategy, RandomForestStrategy, TradingStrategy
 
 
 class NotImplementedStrategy(Exception):
@@ -7,6 +7,7 @@ class NotImplementedStrategy(Exception):
 
 STRATEGIES = {
     "iteration": IterationStrategy,
+    "randomforest": RandomForestStrategy,
 }
 
 

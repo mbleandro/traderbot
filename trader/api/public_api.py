@@ -5,11 +5,37 @@ Esta interface não requer autenticação e pode ser usada para acessar dados p�
 
 import logging
 from datetime import datetime
+from enum import Enum
 from typing import Any, Dict, List
 
 import requests
 
 from ..models.public_data import Candles, TickerData
+
+
+class IntervalResolution(Enum):
+    ONE_MINUTE = (60, "1m")
+    FIFTEEN_MINUTES = (900, "15m")
+    ONE_HOUR = (3600, "1h")
+    THREE_HOURS = (10800, "3h")
+    ONE_DAY = (86400, "1d")
+    ONE_WEEK = (604800, "1w")
+    ONE_MONTH = (2592000, "1M")
+
+    def __init__(self, seconds, label):
+        self.seconds = seconds
+        self.label = label
+
+    @classmethod
+    def from_seconds(cls, seconds: int):
+        for item in cls:
+            if item.seconds == seconds:
+                return item
+        raise ValueError(f"No resolution for interval {seconds}")
+
+    @classmethod
+    def to_resolution(cls, seconds: int) -> str:
+        return cls.from_seconds(seconds).label
 
 
 class MercadoBitcoinPublicAPI:

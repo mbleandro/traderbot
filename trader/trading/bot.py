@@ -1,5 +1,6 @@
 import time
 import traceback
+from datetime import datetime
 
 from trader.base_bot import BaseBot
 from trader.models.public_data import TickerData
@@ -17,6 +18,9 @@ class TradingBot(BaseBot):
         """Executa o bot de trading em tempo real"""
         self.is_running = True
         self.trading_logger.log_bot_start(self.symbol)
+        self.strategy.initialize_historical_data(
+            interval, datetime.now(), self.symbol, self.api
+        )
 
         while self.is_running:
             try:
