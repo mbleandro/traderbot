@@ -17,7 +17,6 @@ def run(
     currency: str = typer.Argument("BTC-BRL", help="The trading symbol (ex: BTC-BRL)"),
     strategy: str = typer.Argument(..., help="The trading strategy to use"),
     interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
-    report: str = typer.Argument("null", help="Opções de persistência"),
     api_key: str | None = None,
     api_secret: str | None = None,
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
@@ -49,7 +48,6 @@ def backtest(
     start_datetime: str | None = typer.Argument(..., help="Data e hora de início"),
     end_datetime: str | None = typer.Argument(..., help="Data e hora de fim"),
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
-    report: str = typer.Argument("null", help="Opções de persistência"),
 ):
     account = Account(FakeMercadoBitcoinPrivateAPI(), currency)
 
@@ -73,7 +71,6 @@ def fake(
     currency: str,
     strategy: str,
     interval: int,
-    report: str = "null",
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
     # Inicializar API pública
