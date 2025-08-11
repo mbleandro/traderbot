@@ -4,10 +4,8 @@ from trader import get_strategy_cls
 from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.api.private_api import MercadoBitcoinPrivateAPI
-from trader.backtesting.bot import BacktestingBot
-from trader.base_bot import BaseBot
+from trader.bot import BacktestingBot, BaseBot, TradingBot
 from trader.report import ReportTerminal
-from trader.trading.bot import TradingBot
 
 app = typer.Typer()
 
