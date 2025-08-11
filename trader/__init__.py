@@ -13,5 +13,5 @@ STRATEGIES = {
 def get_strategy_cls(strategy: str) -> type[TradingStrategy]:
     """Retorna a classe da estratégia correspondente"""
     if strategy not in STRATEGIES:
-        raise NotImplementedStrategy
+        raise NotImplementedStrategy(f"Estratégia {strategy} não implementada")
     return STRATEGIES[strategy]

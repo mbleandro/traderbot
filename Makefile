@@ -32,8 +32,11 @@ clean: ## Remove arquivos temporários e cache
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
+runfake: ## Executa o bot principal com API fake e estratégia burra
+	$(UV) run $(PYTHON) main.py fake BTC-BRL iteration 1 'sell_on_iteration=3 buy_on_iteration=3'
+
 run: ## Executa o bot principal
-	$(UV) run $(PYTHON) main.py $(ARGS)
+	$(UV) run $(PYTHON) main.py run $(ARGS)
 
 charts: ## Gera gráficos dos dados de trading
 	$(UV) run $(PYTHON) report/charts_tools/generate_charts.py $(ARGS)
@@ -47,8 +50,6 @@ lint-fix: ## Executa verificação e corrige automaticamente problemas com Ruff
 typing-check: ## Executa verificação de typing com pyright
 	$(UV) run pyright .
 
-runfake: ## Executa o bot principal com API fake e estratégia burra
-	$(UV) run $(PYTHON) main.py --strategy=iteration --interval=1 --currency=BTC-BRL --sell_on_iteration=3 --fake
 
 format: ## Formata o código com Ruff
 	$(UV) run ruff check --fix .
