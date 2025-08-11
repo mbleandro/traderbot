@@ -31,9 +31,6 @@ class ReportTerminal(ReportBase):
         """Gera relatório de resumo"""
         print("📊 ===== RELATÓRIO DE EXECUÇÃO =====")
 
-        realized_pnl = self.get_total_realized_pnl()
-        unrealized_pnl = self.get_unrealized_pnl()
-
         # self.trading_logger.log_unrealized_pnl(float(unrealized_pnl))
         # self.trading_logger.log_realized_pnl(float(realized_pnl))
 
