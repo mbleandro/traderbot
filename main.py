@@ -20,7 +20,7 @@ def run(
     report: str = typer.Argument("null", help="Opções de persistência"),
     api_key: str | None = None,
     api_secret: str | None = None,
-    **strategy_args,
+    strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
     # Configurar credenciais (use variáveis de ambiente)
     if not api_key or not api_secret:
@@ -32,7 +32,7 @@ def run(
     public_api = MercadoBitcoinPublicAPI()
 
     # Configurar estratégia
-    strategy_obj = _get_strategy_obj(strategy, **strategy_args)
+    strategy_obj = _get_strategy_obj(strategy, strategy_args)
 
     # Configurar persistência
     report_obj = _get_report_obj(report, currency)
@@ -46,10 +46,10 @@ def backtest(
     currency: str = typer.Argument("BTC-BRL", help="The trading symbol (ex: BTC-BRL)"),
     strategy: str = typer.Argument(..., help="The trading strategy to use"),
     interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
-    report: str = typer.Argument("null", help="Opções de persistência"),
     start_datetime: str | None = typer.Argument(..., help="Data e hora de início"),
     end_datetime: str | None = typer.Argument(..., help="Data e hora de fim"),
-    **strategy_args,
+    strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
+    report: str = typer.Argument("null", help="Opções de persistência"),
 ):
     account = Account(FakeMercadoBitcoinPrivateAPI(), currency)
 
@@ -57,7 +57,7 @@ def backtest(
     public_api = MercadoBitcoinPublicAPI()
 
     # Configurar estratégia
-    strategy_obj = _get_strategy_obj(strategy, **strategy_args)
+    strategy_obj = _get_strategy_obj(strategy, strategy_args)
 
     # Configurar persistência
     report_obj = _get_report_obj(report, currency)
