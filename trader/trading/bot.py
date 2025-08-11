@@ -1,17 +1,17 @@
 import time
 import traceback
-from decimal import Decimal
 
 from trader.base_bot import BaseBot
+from trader.models.public_data import TickerData
 
 
 class TradingBot(BaseBot):
     """Bot para trading em tempo real"""
 
-    def get_current_price(self) -> Decimal:
+    def get_current_price(self) -> TickerData:
         """Obtém preço atual do par"""
         ticker = self.api.get_ticker(self.symbol)
-        return Decimal(ticker.last)
+        return ticker
 
     def run(self, interval: int = 60):
         """Executa o bot de trading em tempo real"""
@@ -20,11 +20,11 @@ class TradingBot(BaseBot):
 
         while self.is_running:
             try:
-                current_price = self.get_current_price()
-                self.trading_logger.log_price(self.symbol, float(current_price))
+                current_ticker = self.get_current_price()
+                self.trading_logger.log_price(self.symbol, float(current_ticker.last))
 
                 # Usar método da classe base para processar dados de mercado
-                self.process_market_data(current_price)
+                self.process_market_data(current_ticker)
 
                 time.sleep(interval)
 
