@@ -72,10 +72,8 @@ class Account:
         """Coloca uma ordem de compra/venda"""
 
         if side == OrderSide.BUY and not self.can_buy():
-            self.trading_logger.log_warning("Não é possível executar compra no momento")
             raise ValueError("Não é possível executar compra no momento")
         if side == OrderSide.SELL and not self.can_sell():
-            self.trading_logger.log_warning("Não é possível executar venda no momento")
             raise ValueError("Não é possível executar compra no momento")
 
         try:
@@ -108,8 +106,8 @@ class Account:
 
             return order
 
-        except Exception as e:
-            self.trading_logger.log_error("Erro ao executar compra", e)
+        except Exception as ex:
+            self.logger.error(f"Erro ao executar ordem: {str(ex)}")
             raise
 
     def get_total_realized_pnl(self) -> Decimal:

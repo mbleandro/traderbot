@@ -1,12 +1,12 @@
 import typer
 
-from report.report_method import get_report_cls
 from trader import get_strategy_cls
 from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.api.private_api import MercadoBitcoinPrivateAPI
 from trader.backtesting.bot import BacktestingBot
 from trader.base_bot import BaseBot
+from trader.report import ReportTerminal
 from trader.trading.bot import TradingBot
 
 app = typer.Typer()
@@ -35,7 +35,7 @@ def run(
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
 
     # Configurar persistência
-    report_obj = _get_report_obj(report, currency)
+    report_obj = ReportTerminal()
 
     bot = TradingBot(public_api, strategy_obj, report_obj, account)
     run_bot(bot, interval)
@@ -60,7 +60,7 @@ def backtest(
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
 
     # Configurar persistência
-    report_obj = _get_report_obj(report, currency)
+    report_obj = ReportTerminal()
 
     bot = BacktestingBot(
         public_api, strategy_obj, report_obj, account, start_datetime, end_datetime
@@ -86,7 +86,7 @@ def fake(
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
 
     # Configurar persistência
-    report_obj = _get_report_obj(report, currency)
+    report_obj = ReportTerminal()
 
     bot = TradingBot(public_api, strategy_obj, report_obj, account)
     run_bot(bot, interval)
@@ -114,15 +114,6 @@ def _get_strategy_obj(strategy: str, strategy_args):
         return strategy_cls(**strategy_args)
     except ValueError as ex:
         raise Exception(f"Erro ao configurar estratégia: {ex}") from ex
-
-
-def _get_report_obj(report: str, currency: str):
-    # Configurar persistência
-    try:
-        report_cls = get_report_cls(report)
-        return report_cls(currency)
-    except ValueError as ex:
-        raise Exception(f"Erro na configuração de persistência: {ex}") from ex
 
 
 def run_bot(bot: BaseBot, interval: int):

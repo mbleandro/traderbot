@@ -29,9 +29,9 @@ class TradingBot(BaseBot):
                 time.sleep(interval)
 
             except KeyboardInterrupt:
-                self.logger.info("🛑 Bot interrompido pelo usuário")
+                self.logger.critical("Bot interrompido pelo usuário")
                 self.stop()
-            except Exception as e:
-                self.trading_logger.log_error("Erro no loop principal", e)
+            except Exception as ex:
+                self.logger.error(f"Erro no loop principal: {str(ex)}")
                 traceback.print_exc()
                 time.sleep(interval)

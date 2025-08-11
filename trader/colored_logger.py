@@ -114,7 +114,7 @@ class ColoredFormatter(logging.Formatter):
 class TradingLogger:
     """Classe para configurar e gerenciar logging colorido para trading"""
 
-    def __init__(self, name: str = "TradingBot", level: int = logging.INFO):
+    def __init__(self, name: str = "TradingBot", level: int = logging.ERROR):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
 
@@ -220,48 +220,6 @@ class NullLogger:
         pass
 
 
-class NullTradingLogger:
-    """TradingLogger que não faz nada - implementa padrão Null Object"""
-
-    def __init__(self, name: str = "NullTradingBot"):
-        self._null_logger = NullLogger()
-
-    def get_logger(self):
-        return self._null_logger
-
-    def log_price(self, symbol: str, price: float):
-        pass
-
-    def log_order_placed(
-        self, order_id: str, side: str, price: Decimal, quantity: Decimal
-    ):
-        pass
-
-    def log_position(self, side: str, quantity: float, entry_price: float):
-        pass
-
-    def log_realized_pnl(self, pnl: float):
-        pass
-
-    def log_unrealized_pnl(self, pnl: float):
-        pass
-
-    def log_balance(self, brl_balance: float, btc_balance: float):
-        pass
-
-    def log_bot_start(self, symbol: str):
-        pass
-
-    def log_bot_stop(self):
-        pass
-
-    def log_error(self, message: str, exception: Exception | None = None):
-        pass
-
-    def log_warning(self, message: str):
-        pass
-
-
 def log_progress_bar(percent: float, width: int = 50, overwrite: bool = True):
     """Log de uma barra de progresso colorida
 
@@ -313,9 +271,5 @@ def log_progress_bar(percent: float, width: int = 50, overwrite: bool = True):
 
 def get_trading_logger(
     name: str = "TradingBot", enable_logging: bool = True
-) -> TradingLogger | NullTradingLogger:
-    """Função de conveniência para obter um TradingLogger ou NullTradingLogger"""
-    if enable_logging:
-        return TradingLogger(name)
-    else:
-        return NullTradingLogger(name)
+) -> TradingLogger:
+    return TradingLogger(name, level=logging.INFO if enable_logging else logging.ERROR)
