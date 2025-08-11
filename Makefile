@@ -30,7 +30,7 @@ clean: ## Remove arquivos temporários e cache
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
 runfake: ## Executa o bot principal com API fake e estratégia burra
-	$(UV) run $(PYTHON) main.py fake BTC-BRL iteration 1 'sell_on_iteration=3 buy_on_iteration=3'
+	$(UV) run $(PYTHON) main.py fake BTC-BRL iteration 1 'sell_on_iteration=2 buy_on_iteration=1'
 
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py run $(ARGS)
