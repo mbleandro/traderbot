@@ -33,7 +33,7 @@ runfake: ## Executa o bot principal com API fake e estratégia burra
 	$(UV) run $(PYTHON) main.py fake BTC-BRL iteration 1 'sell_on_iteration=2 buy_on_iteration=1'
 
 backtest: ## Executa o bot principal com API fake e estratégia burra
-	$(UV) run $(PYTHON) main.py backtest BTC-BRL iteration 60 2025-06-01 2025-06-15 'sell_on_iteration=2 buy_on_iteration=1'
+	$(UV) run $(PYTHON) main.py backtest BTC-BRL iteration 60 2025-06-01 2025-06-15 'sell_on_iteration=10 buy_on_iteration=10'
 
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py run $(ARGS)

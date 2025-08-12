@@ -24,14 +24,8 @@ def run(
         raise ValueError("Argumentos api_key e api_secret são obrigatórios")
 
     account = Account(MercadoBitcoinPrivateAPI(api_key, api_secret), currency)
-
-    # Inicializar API pública
     public_api = MercadoBitcoinPublicAPI()
-
-    # Configurar estratégia
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-
-    # Configurar persistência
     report_obj = ReportTerminal()
 
     bot = TradingBot(public_api, strategy_obj, report_obj, account)
@@ -48,14 +42,8 @@ def backtest(
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
     account = Account(FakeMercadoBitcoinPrivateAPI(), currency)
-
-    # Inicializar API pública
     public_api = MercadoBitcoinPublicAPI()
-
-    # Configurar estratégia
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-
-    # Configurar persistência
     report_obj = ReportTerminal()
 
     bot = BacktestingBot(
@@ -71,16 +59,9 @@ def fake(
     interval: int,
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
-    # Inicializar API pública
     public_api = MercadoBitcoinPublicAPI()
-
-    # Configurar conta
     account = Account(FakeMercadoBitcoinPrivateAPI(), currency)
-
-    # Configurar estratégia
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-
-    # Configurar persistência
     report_obj = ReportTerminal()
 
     bot = TradingBot(public_api, strategy_obj, report_obj, account)
@@ -101,7 +82,6 @@ def _get_strategy_obj(strategy: str, strategy_args):
 
         return kwargs
 
-    # Configurar estratégia
     strategy_cls = get_strategy_cls(strategy)
     try:
         if strategy_args:

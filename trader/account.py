@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List
 
-from trader.models.order import Order, OrderSignal
+from trader.models.order import Order
 
 from .api.private_api import MercadoBitcoinPrivateAPIBase
 from .colored_logger import get_trading_logger
@@ -18,7 +18,6 @@ class Account:
         self.account_id = self.get_api_account_id("BRL")
         self.current_position: Position | None = None
         self.position_history: List[Position] = []
-        self.order_history: List[OrderSignal] = []
 
         # Configurar logging colorido
         self.trading_logger = get_trading_logger("Account")
@@ -90,7 +89,7 @@ class Account:
                 quantity=quantity,
                 price=price,
                 side=side,
-                time=datetime.now(),
+                timestamp=datetime.now(),
             )
             if not self.current_position:
                 # Criar nova posição

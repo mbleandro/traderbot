@@ -55,19 +55,28 @@ class BacktestingBot(BaseBot):
         total_candles = len(candles.close)
         print(f"🚀 Iniciando backtesting com {total_candles} candles...")
 
+        last_order_id = None
         with Progress() as progress:
-            task = progress.add_task("[green]Processing...", total=total_candles)
+            task = progress.add_task("[green]Processando...", total=total_candles)
             for index in range(len(candles.close)):
                 current_ticker = candles.get_ticker_from_index(index)
                 try:
+                    progress.update(task, advance=1)
                     timestamp = datetime.fromtimestamp(candles.timestamp[index])
 
                     # Usar método da classe base para processar dados de mercado
                     self.process_market_data(current_ticker, timestamp)
 
-                    progress.update(task, advance=1)
+                    # sempre que houver uma ordem, deve atualizar o valor de timestamp, pra ficar coerente com o backtest
+                    if self.account.position_history:
+                        last_pos = self.account.position_history[-1]
+                        last_order = last_pos.exit_order or last_pos.entry_order
+                        if last_order.order_id != last_order_id:
+                            last_order_id = last_order.order_id
+                            last_order.timestamp = timestamp
 
                 except KeyboardInterrupt:
+                    progress.stop()
                     print("\n🛑 Bot interrompido pelo usuário")
                     self.stop()
                     return
