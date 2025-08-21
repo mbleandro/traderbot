@@ -1,13 +1,11 @@
 import typer
 
-from report.report_method import get_report_cls
 from trader import get_strategy_cls
 from trader.account import Account
 from trader.api import FakeMercadoBitcoinPrivateAPI, MercadoBitcoinPublicAPI
 from trader.api.private_api import MercadoBitcoinPrivateAPI
-from trader.backtesting.bot import BacktestingBot
-from trader.base_bot import BaseBot
-from trader.trading.bot import TradingBot
+from trader.bot import BacktestingBot, BaseBot, TradingBot
+from trader.report import ReportTerminal
 
 app = typer.Typer()
 
@@ -17,7 +15,6 @@ def run(
     currency: str = typer.Argument("BTC-BRL", help="The trading symbol (ex: BTC-BRL)"),
     strategy: str = typer.Argument(..., help="The trading strategy to use"),
     interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
-    report: str = typer.Argument("null", help="Opções de persistência"),
     api_key: str | None = None,
     api_secret: str | None = None,
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
@@ -27,15 +24,9 @@ def run(
         raise ValueError("Argumentos api_key e api_secret são obrigatórios")
 
     account = Account(MercadoBitcoinPrivateAPI(api_key, api_secret), currency)
-
-    # Inicializar API pública
     public_api = MercadoBitcoinPublicAPI()
-
-    # Configurar estratégia
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-
-    # Configurar persistência
-    report_obj = _get_report_obj(report, currency)
+    report_obj = ReportTerminal()
 
     bot = TradingBot(public_api, strategy_obj, report_obj, account)
     run_bot(bot, interval)
@@ -49,18 +40,11 @@ def backtest(
     start_datetime: str | None = typer.Argument(..., help="Data e hora de início"),
     end_datetime: str | None = typer.Argument(..., help="Data e hora de fim"),
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
-    report: str = typer.Argument("null", help="Opções de persistência"),
 ):
     account = Account(FakeMercadoBitcoinPrivateAPI(), currency)
-
-    # Inicializar API pública
     public_api = MercadoBitcoinPublicAPI()
-
-    # Configurar estratégia
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-
-    # Configurar persistência
-    report_obj = _get_report_obj(report, currency)
+    report_obj = ReportTerminal()
 
     bot = BacktestingBot(
         public_api, strategy_obj, report_obj, account, start_datetime, end_datetime
@@ -73,20 +57,12 @@ def fake(
     currency: str,
     strategy: str,
     interval: int,
-    report: str = "null",
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
-    # Inicializar API pública
     public_api = MercadoBitcoinPublicAPI()
-
-    # Configurar conta
     account = Account(FakeMercadoBitcoinPrivateAPI(), currency)
-
-    # Configurar estratégia
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-
-    # Configurar persistência
-    report_obj = _get_report_obj(report, currency)
+    report_obj = ReportTerminal()
 
     bot = TradingBot(public_api, strategy_obj, report_obj, account)
     run_bot(bot, interval)
@@ -106,7 +82,6 @@ def _get_strategy_obj(strategy: str, strategy_args):
 
         return kwargs
 
-    # Configurar estratégia
     strategy_cls = get_strategy_cls(strategy)
     try:
         if strategy_args:
@@ -114,15 +89,6 @@ def _get_strategy_obj(strategy: str, strategy_args):
         return strategy_cls(**strategy_args)
     except ValueError as ex:
         raise Exception(f"Erro ao configurar estratégia: {ex}") from ex
-
-
-def _get_report_obj(report: str, currency: str):
-    # Configurar persistência
-    try:
-        report_cls = get_report_cls(report)
-        return report_cls(currency)
-    except ValueError as ex:
-        raise Exception(f"Erro na configuração de persistência: {ex}") from ex
 
 
 def run_bot(bot: BaseBot, interval: int):

@@ -114,7 +114,7 @@ class ColoredFormatter(logging.Formatter):
 class TradingLogger:
     """Classe para configurar e gerenciar logging colorido para trading"""
 
-    def __init__(self, name: str = "TradingBot", level: int = logging.INFO):
+    def __init__(self, name: str = "TradingBot", level: int = logging.ERROR):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
 
@@ -170,12 +170,6 @@ class TradingLogger:
         unrealized_emoji = "📈" if pnl >= 0 else "📉"
         self.logger.info(f"{unrealized_emoji} PnL não realizado: R$ {pnl:.2f}")
 
-    def log_balance(self, brl_balance: float, btc_balance: float):
-        """Log específico para saldos"""
-        self.logger.info(
-            f"💳 Saldos - BRL: R$ {brl_balance:.2f}, BTC: {btc_balance:.8f}"
-        )
-
     def log_bot_start(self, symbol: str):
         """Log específico para início do bot"""
         self.logger.info(f"🚀 Bot iniciado para {symbol}")
@@ -183,17 +177,6 @@ class TradingLogger:
     def log_bot_stop(self):
         """Log específico para parada do bot"""
         self.logger.info("🛑 Bot parado")
-
-    def log_error(self, message: str, exception: Exception | None = None):
-        """Log específico para erros"""
-        if exception:
-            self.logger.error(f"❌ {message}: {str(exception)}")
-        else:
-            self.logger.error(f"❌ {message}")
-
-    def log_warning(self, message: str):
-        """Log específico para avisos"""
-        self.logger.warning(f"⚠️ {message}")
 
 
 def setup_colored_logging(
@@ -204,118 +187,7 @@ def setup_colored_logging(
     return trading_logger.get_logger()
 
 
-class NullLogger:
-    """Logger que não faz nada - implementa padrão Null Object"""
-
-    def info(self, message: str):
-        pass
-
-    def error(self, message: str):
-        pass
-
-    def warning(self, message: str):
-        pass
-
-    def debug(self, message: str):
-        pass
-
-
-class NullTradingLogger:
-    """TradingLogger que não faz nada - implementa padrão Null Object"""
-
-    def __init__(self, name: str = "NullTradingBot"):
-        self._null_logger = NullLogger()
-
-    def get_logger(self):
-        return self._null_logger
-
-    def log_price(self, symbol: str, price: float):
-        pass
-
-    def log_order_placed(
-        self, order_id: str, side: str, price: Decimal, quantity: Decimal
-    ):
-        pass
-
-    def log_position(self, side: str, quantity: float, entry_price: float):
-        pass
-
-    def log_realized_pnl(self, pnl: float):
-        pass
-
-    def log_unrealized_pnl(self, pnl: float):
-        pass
-
-    def log_balance(self, brl_balance: float, btc_balance: float):
-        pass
-
-    def log_bot_start(self, symbol: str):
-        pass
-
-    def log_bot_stop(self):
-        pass
-
-    def log_error(self, message: str, exception: Exception | None = None):
-        pass
-
-    def log_warning(self, message: str):
-        pass
-
-
-def log_progress_bar(percent: float, width: int = 50, overwrite: bool = True):
-    """Log de uma barra de progresso colorida
-
-    Args:
-        percent: Porcentagem de progresso (0.0 a 100.0)
-        width: Largura da barra de progresso em caracteres (padrão: 50)
-        overwrite: Se True, sobrescreve a linha anterior (padrão: True)
-    """
-    # Garantir que percent está entre 0 e 100
-    percent = max(0.0, min(100.0, percent))
-
-    # Calcular quantos caracteres devem ser preenchidos
-    filled_width = int((percent / 100.0) * width)
-    empty_width = width - filled_width
-
-    # Escolher cor baseada na porcentagem
-    if percent < 25:
-        bar_color = Fore.RED
-    elif percent < 50:
-        bar_color = Fore.YELLOW
-    elif percent < 75:
-        bar_color = Fore.BLUE
-    else:
-        bar_color = Fore.GREEN
-
-    # Criar a barra de progresso
-    filled_bar = "█" * filled_width
-    empty_bar = "░" * empty_width
-
-    # Formatear a mensagem com cores
-    progress_bar = (
-        f"{bar_color}{filled_bar}{Style.RESET_ALL}"
-        f"{Fore.WHITE}{empty_bar}{Style.RESET_ALL}"
-    )
-
-    # Criar a mensagem completa
-    message = f"📊 Progresso: [{progress_bar}] {percent:.1f}%"
-
-    if overwrite and percent > 0:
-        # Usar caracteres de controle para sobrescrever a linha anterior
-        # \r move o cursor para o início da linha
-        # \033[A move o cursor uma linha para cima
-        # \033[K limpa da posição atual até o final da linha
-        print(f"\r\033[A\033[K{message}", flush=True)
-    else:
-        # Print normal para a primeira vez ou quando overwrite=False
-        print(message, flush=True)
-
-
 def get_trading_logger(
     name: str = "TradingBot", enable_logging: bool = True
-) -> TradingLogger | NullTradingLogger:
-    """Função de conveniência para obter um TradingLogger ou NullTradingLogger"""
-    if enable_logging:
-        return TradingLogger(name)
-    else:
-        return NullTradingLogger(name)
+) -> TradingLogger:
+    return TradingLogger(name, level=logging.INFO if enable_logging else logging.ERROR)

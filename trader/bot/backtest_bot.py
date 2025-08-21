@@ -2,8 +2,9 @@ import traceback
 from datetime import datetime
 from enum import Enum
 
-from trader.base_bot import BaseBot
-from trader.colored_logger import log_progress_bar
+from rich.progress import Progress
+
+from trader.bot.base_bot import BaseBot
 from trader.models.public_data import Candles
 
 
@@ -54,28 +55,34 @@ class BacktestingBot(BaseBot):
         total_candles = len(candles.close)
         print(f"🚀 Iniciando backtesting com {total_candles} candles...")
 
-        # Inicializar barra de progresso
-        log_progress_bar(0.0, overwrite=False)
+        last_order_id = None
+        with Progress() as progress:
+            task = progress.add_task("[green]Processando...", total=total_candles)
+            for index in range(len(candles.close)):
+                current_ticker = candles.get_ticker_from_index(index)
+                try:
+                    progress.update(task, advance=1)
+                    timestamp = datetime.fromtimestamp(candles.timestamp[index])
 
-        for index in range(len(candles.close)):
-            current_ticker = candles.get_ticker_from_index(index)
-            try:
-                timestamp = datetime.fromtimestamp(candles.timestamp[index])
+                    # Usar método da classe base para processar dados de mercado
+                    self.process_market_data(current_ticker, timestamp)
 
-                # Usar método da classe base para processar dados de mercado
-                self.process_market_data(current_ticker, timestamp)
+                    # sempre que houver uma ordem, deve atualizar o valor de timestamp, pra ficar coerente com o backtest
+                    if self.account.position_history:
+                        last_pos = self.account.position_history[-1]
+                        last_order = last_pos.exit_order or last_pos.entry_order
+                        if last_order.order_id != last_order_id:
+                            last_order_id = last_order.order_id
+                            last_order.timestamp = timestamp
 
-                # Atualizar barra de progresso
-                progress_percent = ((index + 1) / total_candles) * 100
-                log_progress_bar(progress_percent)
-
-            except KeyboardInterrupt:
-                print("\n🛑 Bot interrompido pelo usuário")
-                self.stop()
-                return
-            except Exception as e:
-                print(f"❌ Erro no loop principal: {str(e)}")
-                traceback.print_exc()
+                except KeyboardInterrupt:
+                    progress.stop()
+                    print("\n🛑 Bot interrompido pelo usuário")
+                    self.stop()
+                    return
+                except Exception as e:
+                    print(f"❌ Erro no loop principal: {str(e)}")
+                    traceback.print_exc()
 
         print("\n📈 Simulação finalizada")
         self.stop()
