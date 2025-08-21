@@ -53,8 +53,6 @@ class BacktestingBot(BaseBot):
         candles = self.get_historical_prices(IntervalResolution.to_resolution(interval))
 
         total_candles = len(candles.close)
-        print(f"🚀 Iniciando backtesting com {total_candles} candles...")
-
         last_order_id = None
         with Progress() as progress:
             task = progress.add_task("[green]Processando...", total=total_candles)
@@ -62,27 +60,23 @@ class BacktestingBot(BaseBot):
                 current_ticker = candles.get_ticker_from_index(index)
                 try:
                     progress.update(task, advance=1)
-                    timestamp = datetime.fromtimestamp(candles.timestamp[index])
+                    self.process_market_data(current_ticker)
 
-                    # Usar método da classe base para processar dados de mercado
-                    self.process_market_data(current_ticker, timestamp)
-
-                    # sempre que houver uma ordem, deve atualizar o valor de timestamp, pra ficar coerente com o backtest
+                    # sempre que houver uma ordem, deve atualizar o valor de timestamp, pra ficar coerente com o backtest.
                     if self.account.position_history:
                         last_pos = self.account.position_history[-1]
                         last_order = last_pos.exit_order or last_pos.entry_order
                         if last_order.order_id != last_order_id:
                             last_order_id = last_order.order_id
-                            last_order.timestamp = timestamp
+                            last_order.timestamp = datetime.fromtimestamp(
+                                candles.timestamp[index]
+                            )
 
                 except KeyboardInterrupt:
                     progress.stop()
-                    print("\n🛑 Bot interrompido pelo usuário")
                     self.stop()
                     return
-                except Exception as e:
-                    print(f"❌ Erro no loop principal: {str(e)}")
+                except Exception:
                     traceback.print_exc()
 
-        print("\n📈 Simulação finalizada")
         self.stop()

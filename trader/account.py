@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import List
@@ -5,7 +6,6 @@ from typing import List
 from trader.models.order import Order
 
 from .api.private_api import MercadoBitcoinPrivateAPIBase
-from .colored_logger import get_trading_logger
 from .models import OrderSide, Position, PositionType
 
 
@@ -19,9 +19,7 @@ class Account:
         self.current_position: Position | None = None
         self.position_history: List[Position] = []
 
-        # Configurar logging colorido
-        self.trading_logger = get_trading_logger("Account")
-        self.logger = self.trading_logger.get_logger()
+        self.logger = logging.getLogger("Account")
 
     def get_api_account_id(self, currency: str) -> str:
         accounts = self.api.get_accounts()
@@ -68,8 +66,6 @@ class Account:
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
     def place_order(self, price: Decimal, side: OrderSide, quantity: Decimal) -> Order:
-        """Coloca uma ordem de compra/venda"""
-
         if side == OrderSide.BUY and not self.can_buy():
             raise ValueError("Não é possível executar compra no momento")
         if side == OrderSide.SELL and not self.can_sell():

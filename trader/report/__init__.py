@@ -127,15 +127,15 @@ class TradeStats(ReportData):
     @classmethod
     def from_bot_data(cls, position_history: List[Position]):
         wins = [pos.realized_pnl for pos in position_history if pos.realized_pnl > 0]
-        losses = [pos.realized_pnl for pos in position_history if pos.realized_pnl < 0]
+        losses = [pos.realized_pnl for pos in position_history if pos.realized_pnl <= 0]
+        mean_wins = mean(wins) if wins else Decimal("0")
+        mean_losses = mean(losses) if losses else Decimal("0")
 
         return cls(
-            avg_win=mean(wins),
-            avg_loss=mean(losses),
+            avg_win=mean_wins,
+            avg_loss=mean_losses,
             payoff=(
-                abs(mean(wins)) / abs(mean(losses))
-                if mean(losses) != 0
-                else Decimal("0")
+                abs(mean_wins) / abs(mean_losses) if mean_losses != 0 else Decimal("0")
             ),
             expectancy=mean(wins + losses),
             greatest_gain=max(wins, default=Decimal("0")),

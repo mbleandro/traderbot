@@ -44,9 +44,7 @@ class MercadoBitcoinPrivateAPIBase(ABC):
     @abstractmethod
     def place_order(
         self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
-    ) -> str:
-        """Coloca uma ordem de compra/venda"""
-        ...
+    ) -> str: ...
 
     @abstractmethod
     def get_orders(
@@ -140,7 +138,6 @@ class MercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):
     def place_order(
         self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
     ) -> str:
-        """Coloca uma ordem de compra/venda"""
         data = {
             "qty": quantity,
             "side": side,

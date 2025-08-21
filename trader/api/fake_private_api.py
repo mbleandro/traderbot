@@ -65,7 +65,6 @@ class FakeMercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):
     def place_order(
         self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
     ) -> str:
-        """Simula colocação de uma ordem de compra/venda"""
         self._order_counter += 1
         order_id = f"fake_order_{self._order_counter}"
 
