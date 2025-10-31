@@ -1,4 +1,9 @@
-from .trading_strategy import IterationStrategy, TradingStrategy
+from .trading_strategy import (
+    DynamicTargetStrategy,
+    IterationStrategy,
+    TargetValueStrategy,
+    TradingStrategy,
+)
 
 
 class NotImplementedStrategy(Exception):
@@ -7,6 +12,8 @@ class NotImplementedStrategy(Exception):
 
 STRATEGIES = {
     "iteration": IterationStrategy,
+    "target_value": TargetValueStrategy,
+    "dynamic_target": DynamicTargetStrategy,
 }
 
 

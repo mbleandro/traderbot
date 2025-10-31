@@ -66,3 +66,275 @@ class IterationStrategy(TradingStrategy):
                     OrderSide.SELL, current_position.entry_order.quantity
                 )
         return None
+
+
+class TargetValueStrategy(TradingStrategy):
+    """
+    Estratégia de valor alvo com stop loss dinâmico.
+
+    O bot compra quando o preço atinge um valor alvo configurado.
+    Acompanha o valor até atingir um percentual de ganho configurado.
+    Quando atingir esse percentual, ativa um stop loss de 1% (vende se cair 1%).
+
+    Args:
+        target_buy_price (Decimal|str): Preço alvo para compra
+        target_profit_percent (Decimal|str): Percentual de ganho alvo (ex: 5 para 5%)
+        stop_loss_percent (Decimal|str): Percentual de stop loss após atingir ganho alvo (padrão: 1 para 1%)
+        balance_percent (Decimal|str): Percentual do saldo a usar na compra (padrão: 80 para 80%)
+    """
+
+    def __init__(
+        self,
+        target_buy_price: Decimal | str,
+        target_profit_percent: Decimal | str,
+        stop_loss_percent: Decimal | str = "1",
+        balance_percent: Decimal | str = "80",
+    ):
+        self.target_buy_price = Decimal(str(target_buy_price))
+        self.target_profit_percent = Decimal(str(target_profit_percent))
+        self.stop_loss_percent = Decimal(str(stop_loss_percent))
+        self.balance_percent = Decimal(str(balance_percent))
+        self.max_position_periods = 10
+
+        # Estado interno
+        self.target_profit_reached = False
+        self.highest_price_after_target = Decimal("0")
+        self.position_periods = 0
+
+    def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
+        """Calcula a quantidade a comprar baseado no saldo disponível"""
+        quantity = (balance * (self.balance_percent / Decimal("100"))) / price
+        return quantity
+
+    def on_market_refresh(
+        self,
+        ticker: TickerData,
+        balance: Decimal,
+        current_position: Position | None,
+        position_history: list[Position],
+    ) -> OrderSignal | None:
+        current_price = ticker.last
+
+        # Se não tem posição, verifica se deve comprar
+        if not current_position:
+            # Reset do estado quando não há posição
+            self.target_profit_reached = False
+            self.highest_price_after_target = Decimal("0")
+
+            # Compra quando o preço atingir ou estiver abaixo do valor alvo
+            if current_price <= self.target_buy_price:
+                self.position_periods = 0
+                # print(f"Current price: {current_price} - BUYING!")
+                return OrderSignal(
+                    OrderSide.BUY,
+                    self.calculate_quantity(balance, current_price),
+                )
+        else:
+            # Tem posição aberta, verifica condições de venda
+            entry_price = current_position.entry_order.price
+
+            # Calcula o percentual de ganho atual
+            profit_percent = ((current_price - entry_price) / entry_price) * Decimal(
+                "100"
+            )
+
+            # Verifica se atingiu o ganho alvo
+            if profit_percent >= self.target_profit_percent:
+                self.position_periods += 1
+                if not self.target_profit_reached:
+                    # Primeira vez que atinge o ganho alvo
+                    self.target_profit_reached = True
+                    self.highest_price_after_target = current_price
+
+                # Atualiza o preço mais alto após atingir o ganho alvo
+                if current_price > self.highest_price_after_target:
+                    self.highest_price_after_target = current_price
+
+                # Calcula a queda percentual desde o pico
+                drop_percent = (
+                    (self.highest_price_after_target - current_price)
+                    / self.highest_price_after_target
+                ) * Decimal("100")
+
+                if self.position_periods >= self.max_position_periods:
+                    # print(f"Current price: {current_price} - SELLING!")
+                    return OrderSignal(
+                        OrderSide.SELL, current_position.entry_order.quantity
+                    )
+
+                # Ativa stop loss se cair o percentual configurado
+                if drop_percent >= self.stop_loss_percent:
+                    # print(f"Current price: {current_price} - SELLING!")
+                    return OrderSignal(
+                        OrderSide.SELL, current_position.entry_order.quantity
+                    )
+
+        # print(f"Current price: {current_price}")
+        return None
+
+
+class DynamicTargetStrategy(TradingStrategy):
+    """
+    Estratégia de target dinâmico usando EMA (Exponential Moving Average) e ATR (Average True Range).
+
+    O bot calcula um preço-alvo de compra dinâmico baseado na tendência (EMA) e volatilidade (ATR):
+    - Target Buy = EMA - (ATR × buy_factor)
+    - Target Sell = EMA + (ATR × sell_factor)
+
+    Isso permite que o bot se adapte automaticamente às condições do mercado:
+    - Em mercados voláteis (ATR alto), os targets ficam mais distantes
+    - Em mercados calmos (ATR baixo), os targets ficam mais próximos
+
+    Args:
+        ema_period (int): Período da média móvel exponencial (padrão: 20)
+        atr_period (int): Período do ATR (padrão: 14)
+        buy_factor (Decimal|str): Multiplicador do ATR para calcular target de compra (padrão: 1.5)
+        sell_factor (Decimal|str): Multiplicador do ATR para calcular target de venda (padrão: 1.5)
+        balance_percent (Decimal|str): Percentual do saldo a usar na compra (padrão: 80)
+        stop_loss_atr_factor (Decimal|str): Multiplicador do ATR para stop loss (padrão: 3.0)
+    """
+
+    def __init__(
+        self,
+        ema_period: int | str = "20",
+        atr_period: int | str = "14",
+        buy_factor: Decimal | str = "1.5",
+        sell_factor: Decimal | str = "1.5",
+        balance_percent: Decimal | str = "80",
+        stop_loss_atr_factor: Decimal | str = "3.0",
+    ):
+        self.ema_period = int(ema_period)
+        self.atr_period = int(atr_period)
+        self.buy_factor = Decimal(str(buy_factor))
+        self.sell_factor = Decimal(str(sell_factor))
+        self.balance_percent = Decimal(str(balance_percent))
+        self.stop_loss_atr_factor = Decimal(str(stop_loss_atr_factor))
+
+        # Histórico de preços para cálculos
+        self.ticker_history: list[TickerData] = []
+
+        # Cache de EMA (para cálculo incremental)
+        self.current_ema: Decimal | None = None
+
+    def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
+        """Calcula a quantidade a comprar baseado no saldo disponível"""
+        quantity = (balance * (self.balance_percent / Decimal("100"))) / price
+        return quantity
+
+    def calculate_ema(self, prices: list[Decimal], period: int) -> Decimal:
+        """
+        Calcula a EMA (Exponential Moving Average).
+
+        EMA_t = EMA_{t-1} + α × (P_t - EMA_{t-1})
+        onde α = 2 / (period + 1)
+        """
+        if len(prices) < period:
+            # Se não temos dados suficientes, retorna a média simples
+            return sum(prices) / Decimal(len(prices))
+
+        # Fator de suavização
+        alpha = Decimal("2") / Decimal(period + 1)
+
+        # Se já temos EMA calculada, usa cálculo incremental
+        if self.current_ema is not None:
+            self.current_ema = self.current_ema + alpha * (
+                prices[-1] - self.current_ema
+            )
+            return self.current_ema
+
+        # Primeira vez: calcula SMA dos primeiros 'period' valores como seed
+        sma = sum(prices[:period]) / Decimal(period)
+        ema = sma
+
+        # Aplica EMA para os valores restantes
+        for price in prices[period:]:
+            ema = ema + alpha * (price - ema)
+
+        self.current_ema = ema
+        return ema
+
+    def calculate_true_range(self, current: TickerData, previous: TickerData) -> Decimal:
+        """
+        Calcula o True Range de um período.
+
+        TR = max(High - Low, |High - Close_prev|, |Low - Close_prev|)
+        """
+        high_low = current.high - current.low
+        high_close = abs(current.high - previous.last)
+        low_close = abs(current.low - previous.last)
+
+        return max(high_low, high_close, low_close)
+
+    def calculate_atr(self, tickers: list[TickerData], period: int) -> Decimal:
+        """
+        Calcula o ATR (Average True Range).
+
+        ATR é a média móvel simples dos True Ranges.
+        """
+        if len(tickers) < 2:
+            # Não temos dados suficientes, usa o range do candle atual
+            return tickers[-1].high - tickers[-1].low
+
+        # Calcula True Range para cada período (precisa de pelo menos 2 candles)
+        true_ranges: list[Decimal] = []
+        for i in range(1, len(tickers)):
+            tr = self.calculate_true_range(tickers[i], tickers[i - 1])
+            true_ranges.append(tr)
+
+        # Se não temos dados suficientes para o período completo, usa o que temos
+        if len(true_ranges) < period:
+            return sum(true_ranges) / Decimal(len(true_ranges))
+
+        # Calcula a média dos últimos 'period' True Ranges
+        recent_trs = true_ranges[-period:]
+        atr = sum(recent_trs) / Decimal(period)
+
+        return atr
+
+    def on_market_refresh(
+        self,
+        ticker: TickerData,
+        balance: Decimal,
+        current_position: Position | None,
+        position_history: list[Position],
+    ) -> OrderSignal | None:
+        # Adiciona o ticker ao histórico
+        self.ticker_history.append(ticker)
+
+        # Precisamos de dados suficientes para calcular EMA e ATR
+        min_required = max(self.ema_period, self.atr_period)
+        if len(self.ticker_history) < min_required:
+            return None
+
+        current_price = ticker.last
+
+        # Calcula EMA e ATR
+        prices = [t.last for t in self.ticker_history]
+        ema = self.calculate_ema(prices, self.ema_period)
+        atr = self.calculate_atr(self.ticker_history, self.atr_period)
+
+        # Calcula os targets dinâmicos
+        target_buy = ema - (atr * self.buy_factor)
+        target_sell = ema + (atr * self.sell_factor)
+        stop_loss = ema - (atr * self.stop_loss_atr_factor)
+
+        # Se não tem posição, verifica se deve comprar
+        if not current_position:
+            # Compra quando o preço cai abaixo do target dinâmico
+            if current_price <= target_buy:
+                return OrderSignal(
+                    OrderSide.BUY,
+                    self.calculate_quantity(balance, current_price),
+                )
+        else:
+            # Tem posição aberta, verifica condições de venda
+
+            # Vende quando atinge o target de venda (take profit)
+            if current_price >= target_sell:
+                return OrderSignal(OrderSide.SELL, current_position.entry_order.quantity)
+
+            # Stop loss: vende se cair muito abaixo da EMA
+            if current_price <= stop_loss:
+                return OrderSignal(OrderSide.SELL, current_position.entry_order.quantity)
+
+        return None

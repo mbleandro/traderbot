@@ -35,10 +35,10 @@ class FakeMercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):
         self._fake_balances = {
             "fake_account_1": [
                 {
-                    "available": "10000.00",
+                    "available": "100.00",
                     "on_hold": "0.00",
                     "symbol": "BRL",
-                    "total": "10000.00",
+                    "total": "100.00",
                 },
                 {
                     "available": "0.5",

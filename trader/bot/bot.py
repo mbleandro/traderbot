@@ -57,7 +57,7 @@ class TradingBot(BaseBot):
 
 def log_ticker(symbol: str, price: Decimal, total_pnl: Decimal):
     console.print(
-        f"[blue]{symbol}[/blue] @ R$ {price:.2f}. Realized PNL: R$ {total_pnl:.2f}"
+        f"[blue]{symbol}[/blue] @ R$ {price:.8f}. Realized PNL: R$ {total_pnl:.2f}"
     )
 
 
