@@ -53,41 +53,68 @@ class WebsocketTradingBot(BaseBot):
         self.is_running = True
         asyncio.run(self._run())
 
-    async def _run(self):
-        async with websockets.connect(
+    async def connect_ws(self):
+        return await websockets.connect(
             "wss://trench-stream.jup.ag/ws",
             additional_headers={"Origin": "https://jup.ag"},
-            compression="deflate",  # 🔥 suporta RSV automaticamente
-        ) as ws:
-            await ws.send(
-                json.dumps({"type": "subscribe:prices", "assets": [self.token]})
-            )
+            compression="deflate",
+        )
 
-            self.notification_service.send_message(f"Bot iniciado para {self.symbol}")
+    async def _run(self):
+        should_stop = False
+        while not should_stop:
+            try:
+                ws = await self.connect_ws()
+                await ws.send(
+                    json.dumps({"type": "subscribe:prices", "assets": [self.token]})
+                )
+                self.notification_service.send_message(
+                    f"Bot iniciado para {self.symbol}"
+                )
 
-            while True:
-                try:
-                    current_ticker = await self.get_current_ticker(ws)
-                    total_pnl = self.account.get_total_realized_pnl()
-                    log_ticker(self.symbol, current_ticker.last, total_pnl)
+                while True:
+                    try:
+                        current_ticker = await self.get_current_ticker(ws)
+                        total_pnl = self.account.get_total_realized_pnl()
+                        log_ticker(self.symbol, current_ticker.last, total_pnl)
 
-                    order = self.process_market_data(current_ticker)
-                    if order:
-                        log_placed_order(order)
-                        self.notification_service.send_message(
-                            f"Ordem executada: {order.side.upper()} {order.quantity:.8f} {self.symbol} @ {self.in_symbol} {order.price:.2f}"
+                        order = self.process_market_data(current_ticker)
+                        if order:
+                            log_placed_order(order)
+                            self.notification_service.send_message(
+                                f"Ordem executada: {order.side.upper()} "
+                                f"{order.quantity:.8f} {self.symbol} @ "
+                                f"{self.in_symbol} {order.price:.2f}"
+                            )
+
+                        position = self.get_position()
+                        if position:
+                            log_position(position, self.ticker_history[-1].last)
+
+                    except websockets.exceptions.ConnectionClosedError:
+                        self.logger.warning(
+                            "Conexão WebSocket perdida. Reconnectando..."
                         )
+                        self.notification_service.send_message(
+                            "Conexão WebSocket perdida. Reconnectando..."
+                        )
+                        break  # Sai do loop interno e volta para tentar reconectar
 
-                    position = self.get_position()
-                    if position:
-                        log_position(position, self.ticker_history[-1].last)
+                    except KeyboardInterrupt:
+                        self.logger.warning("Bot interrompido pelo usuário")
+                        self.notification_service.send_message(
+                            "Bot interrompido pelo usuário"
+                        )
+                        should_stop = True
+                        return
 
-                except KeyboardInterrupt:
-                    self.logger.warning("Bot interrompido pelo usuário")
-                    self.stop()
-                except Exception as ex:
-                    self.logger.error(f"Erro no loop principal: {str(ex)}")
-                    traceback.print_exc()
+                    except Exception as ex:
+                        self.logger.error(f"Erro no loop principal: {str(ex)}")
+                        traceback.print_exc()
+
+            except Exception as ex:
+                self.logger.error(f"Erro ao conectar WebSocket: {str(ex)}")
+                await asyncio.sleep(2)  # Espera antes de tentar reconectar
 
     def get_position(self):
         position = self.account.get_position()
