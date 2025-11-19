@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
 
+import pandas as pd
+
 from trader.models.public_data import TickerData
 
 from .models import OrderSide, OrderSignal, Position
@@ -31,13 +33,9 @@ class IterationStrategy(TradingStrategy):
         sell_on_iteration (int): Número de iterações para vender
     """
 
-    def __init__(
-        self,
-        buy_on_iteration=2,
-        sell_on_iteration=5,
-    ):
-        self.buy_on_iteration = int(buy_on_iteration)
-        self.sell_on_iteration = int(sell_on_iteration)
+    def __init__(self, sell_on_iteration: int, buy_on_iteration: int):
+        self.sell_on_iteration = sell_on_iteration
+        self.buy_on_iteration = buy_on_iteration
         self.price_history: list[Decimal] = []
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
@@ -89,17 +87,88 @@ class TargetValueStrategy(TradingStrategy):
         target_profit_percent: Decimal | str,
         stop_loss_percent: Decimal | str = "1",
         balance_percent: Decimal | str = "80",
+        max_spread: Decimal | str = "1.5",
     ):
         self.target_buy_price = Decimal(str(target_buy_price))
         self.target_profit_percent = Decimal(str(target_profit_percent))
         self.stop_loss_percent = Decimal(str(stop_loss_percent))
         self.balance_percent = Decimal(str(balance_percent))
         self.max_position_periods = 10
+        self.max_spread = Decimal(str(max_spread))
 
         # Estado interno
         self.target_profit_reached = False
         self.highest_price_after_target = Decimal("0")
         self.position_periods = 0
+        self.last_price = None
+        self.price_history: list[Decimal] = []
+        self.max_history_size = 60 * 60 * 4 / 10  # 4h
+        self.same_target_count = 0
+        self.report_interval = 60 * 60 / 10  # 1h
+
+    def _recalculate_target_buy_price(self):
+        """
+        Calcula o target buy (preço-alvo de compra) com base em uma lista de preços históricos (Decimal).
+        Segue a mesma lógica da função original, mas sem puxar dados de candles da API.
+        """
+        if len(self.price_history) < 200:
+            return
+
+        # -----------------------
+        # 1. Converter lista em DataFrame
+        # -----------------------
+        df = pd.DataFrame({"c": [float(p) for p in self.price_history]})
+        df.index = pd.RangeIndex(start=0, stop=len(df))
+
+        # Como não temos high/low, podemos derivar deles:
+        # assumindo que o preço oscilou ±0.2% em cada candle
+        df["h"] = df["c"] * 1.005
+        df["l"] = df["c"] * 0.995
+
+        # -----------------------
+        # 2. Calcular EMA50 e EMA200
+        # -----------------------
+        df["EMA50"] = df["c"].ewm(span=50, adjust=False).mean()
+        df["EMA200"] = df["c"].ewm(span=200, adjust=False).mean()
+
+        # -----------------------
+        # 3. Calcular ATR (Average True Range)
+        # -----------------------
+        df["H-L"] = df["h"] - df["l"]
+        df["H-PC"] = abs(df["h"] - df["c"].shift(1))
+        df["L-PC"] = abs(df["l"] - df["c"].shift(1))
+        df["TR"] = df[["H-L", "H-PC", "L-PC"]].max(axis=1)
+        df["ATR"] = df["TR"].rolling(window=60).mean()
+
+        # -----------------------
+        # 4. Calcular RSI14
+        # -----------------------
+        delta = df["c"].diff()
+        gain = delta.where(delta > 0, 0)
+        loss = -delta.where(delta < 0, 0)
+        avg_gain = gain.rolling(14).mean()
+        avg_loss = loss.rolling(14).mean()
+        rs = avg_gain / avg_loss
+        df["RSI14"] = 100 - (100 / (1 + rs))
+
+        # -----------------------
+        # 5. Calcular Target Buy
+        # -----------------------
+        latest = df.iloc[-1]
+        k = 1.5 if latest["EMA50"] > latest["EMA200"] else 2.2
+        target_buy = latest["EMA50"] - k * latest["ATR"]
+
+        # -----------------------
+        # 6. Exibir resultados
+        # -----------------------
+        print(f"Último preço: {latest['c']:.8f}")
+        print(f"EMA50: {latest['EMA50']:.8f}")
+        print(f"EMA200: {latest['EMA200']:.8f}")
+        print(f"ATR: {latest['ATR']:.8f}")
+        print(f"RSI14: {latest['RSI14']:.2f}")
+        print(f"Target buy calculado: {target_buy:.8f}")
+
+        self.target_buy_price = target_buy
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
         """Calcula a quantidade a comprar baseado no saldo disponível"""
@@ -113,18 +182,41 @@ class TargetValueStrategy(TradingStrategy):
         current_position: Position | None,
         position_history: list[Position],
     ) -> OrderSignal | None:
-        current_price = ticker.last
+        current_price = ticker.buy
+
+        self.price_history.append(current_price)
+        self.same_target_count += 1
+        if len(self.price_history) > self.max_history_size:
+            self.price_history.pop(0)
 
         # Se não tem posição, verifica se deve comprar
         if not current_position:
+            # if self.same_target_count > self.max_history_size:
+            #     self._recalculate_target_buy_price()
+            #     self.same_target_count = 0
             # Reset do estado quando não há posição
             self.target_profit_reached = False
             self.highest_price_after_target = Decimal("0")
 
             # Compra quando o preço atingir ou estiver abaixo do valor alvo
             if current_price <= self.target_buy_price:
+                if ticker.spread is not None and ticker.spread > self.max_spread:
+                    print(f"Skip buying for high spread = {ticker.spread}")
+                    print(
+                        f"Current price: {current_price}; target buy: {self.target_buy_price}; spread: {ticker.spread}"
+                    )
+                    return None
+                if self.last_price is None or current_price < self.last_price:
+                    print("Skip buying - waiting for price to stop dropping")
+                    print(
+                        f"Current price: {current_price}; target buy: {self.target_buy_price}; spread: {ticker.spread}"
+                    )
+                    self.last_price = current_price
+                    return None
                 self.position_periods = 0
-                # print(f"Current price: {current_price} - BUYING!")
+                print(
+                    f"Current price: {current_price} <= Target buy: {self.target_buy_price} - BUYING!"
+                )
                 return OrderSignal(
                     OrderSide.BUY,
                     self.calculate_quantity(balance, current_price),
@@ -139,7 +231,10 @@ class TargetValueStrategy(TradingStrategy):
             )
 
             # Verifica se atingiu o ganho alvo
-            if profit_percent >= self.target_profit_percent:
+            if profit_percent >= self.target_profit_percent or (
+                self.target_profit_reached
+                and profit_percent >= self.target_profit_percent - Decimal("1.1")
+            ):
                 self.position_periods += 1
                 if not self.target_profit_reached:
                     # Primeira vez que atinge o ganho alvo
@@ -157,19 +252,21 @@ class TargetValueStrategy(TradingStrategy):
                 ) * Decimal("100")
 
                 if self.position_periods >= self.max_position_periods:
-                    # print(f"Current price: {current_price} - SELLING!")
+                    print(f"Current price: {current_price} - SELLING!")
                     return OrderSignal(
                         OrderSide.SELL, current_position.entry_order.quantity
                     )
 
                 # Ativa stop loss se cair o percentual configurado
                 if drop_percent >= self.stop_loss_percent:
-                    # print(f"Current price: {current_price} - SELLING!")
+                    print(f"Current price: {current_price} - SELLING!")
                     return OrderSignal(
                         OrderSide.SELL, current_position.entry_order.quantity
                     )
 
-        # print(f"Current price: {current_price}")
+        msg = f"Current price: {current_price:.9f}; target buy: {self.target_buy_price:.9f}"
+        print(msg)
+        self.last_price = current_price
         return None
 
 
@@ -253,7 +350,9 @@ class DynamicTargetStrategy(TradingStrategy):
         self.current_ema = ema
         return ema
 
-    def calculate_true_range(self, current: TickerData, previous: TickerData) -> Decimal:
+    def calculate_true_range(
+        self, current: TickerData, previous: TickerData
+    ) -> Decimal:
         """
         Calcula o True Range de um período.
 
@@ -331,10 +430,14 @@ class DynamicTargetStrategy(TradingStrategy):
 
             # Vende quando atinge o target de venda (take profit)
             if current_price >= target_sell:
-                return OrderSignal(OrderSide.SELL, current_position.entry_order.quantity)
+                return OrderSignal(
+                    OrderSide.SELL, current_position.entry_order.quantity
+                )
 
             # Stop loss: vende se cair muito abaixo da EMA
             if current_price <= stop_loss:
-                return OrderSignal(OrderSide.SELL, current_position.entry_order.quantity)
+                return OrderSignal(
+                    OrderSide.SELL, current_position.entry_order.quantity
+                )
 
         return None

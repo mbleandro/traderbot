@@ -22,6 +22,7 @@ class TickerData:
     pair: str
     sell: Decimal
     vol: Decimal
+    spread: Decimal | None = None
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TickerData":

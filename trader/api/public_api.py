@@ -10,9 +10,10 @@ from typing import Any, Dict, List
 import requests
 
 from ..models.public_data import Candles, TickerData
+from .base_api import PublicAPIBase
 
 
-class MercadoBitcoinPublicAPI:
+class MercadoBitcoinPublicAPI(PublicAPIBase):
     """
     Interface pública da API do Mercado Bitcoin.
     Não requer autenticação - ideal para bots que só precisam de dados de preços.

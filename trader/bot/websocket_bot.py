@@ -1,0 +1,134 @@
+import asyncio
+import json
+import traceback
+from datetime import datetime
+from decimal import Decimal
+
+import websockets
+import websockets.asyncio
+import websockets.asyncio.client
+from rich.console import Console
+from rich.text import Text
+
+from trader.bot.base_bot import BaseBot
+from trader.models.order import Order
+from trader.models.position import Position
+from trader.models.public_data import TickerData
+
+console = Console()
+
+
+class WebsocketTradingBot(BaseBot):
+    def __init__(self, api, strategy, report, account, notification_service):
+        super().__init__(api, strategy, report, account, notification_service)
+        self.in_symbol, self.out_symbol = self.symbol.split("-")
+        self.token = {
+            "SOL": "So11111111111111111111111111111111111111112",
+            "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "USDT": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+            "BONK": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+            "JUP": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+        }[self.in_symbol]
+
+    async def get_current_ticker(
+        self, ws: websockets.asyncio.client.ClientConnection
+    ) -> TickerData:
+        msg = await ws.recv()
+        # '{"type":"prices","data":[{"assetId":"DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263","price":0.000010537070513205161,"blockId":380968492}]}'
+        json_msg = json.loads(msg)
+        price = Decimal(json_msg["data"][0]["price"])
+        return TickerData(
+            buy=price,
+            timestamp=datetime.now(),
+            high=price,  # Não disponível, usa preço atual
+            last=price,
+            low=price,  # Não disponível, usa preço atual
+            open=price,  # Não disponível, usa preço atual
+            pair=self.symbol,
+            sell=price,
+            vol=Decimal("0"),  # Não disponível via quote API
+        )
+
+    def run(self, interval: int = 60):
+        self.is_running = True
+        asyncio.run(self._run())
+
+    async def _run(self):
+        async with websockets.connect(
+            "wss://trench-stream.jup.ag/ws",
+            additional_headers={"Origin": "https://jup.ag"},
+            compression="deflate",  # 🔥 suporta RSV automaticamente
+        ) as ws:
+            await ws.send(
+                json.dumps({"type": "subscribe:prices", "assets": [self.token]})
+            )
+
+            self.notification_service.send_message(f"Bot iniciado para {self.symbol}")
+
+            while True:
+                try:
+                    current_ticker = await self.get_current_ticker(ws)
+                    total_pnl = self.account.get_total_realized_pnl()
+                    log_ticker(self.symbol, current_ticker.last, total_pnl)
+
+                    order = self.process_market_data(current_ticker)
+                    if order:
+                        log_placed_order(order)
+                        self.notification_service.send_message(
+                            f"Ordem executada: {order.side.upper()} {order.quantity:.8f} {self.symbol} @ {self.in_symbol} {order.price:.2f}"
+                        )
+
+                    position = self.get_position()
+                    if position:
+                        log_position(position, self.ticker_history[-1].last)
+
+                except KeyboardInterrupt:
+                    self.logger.warning("Bot interrompido pelo usuário")
+                    self.stop()
+                except Exception as ex:
+                    self.logger.error(f"Erro no loop principal: {str(ex)}")
+                    traceback.print_exc()
+
+    def get_position(self):
+        position = self.account.get_position()
+        last_position = (
+            self.account.position_history[-1] if self.account.position_history else None
+        )
+        if last_position != self.last_position:
+            self.last_position = last_position
+            position = last_position
+        return position
+
+
+def log_ticker(symbol: str, price: Decimal, total_pnl: Decimal):
+    fiat_symbol = symbol.split("-")[1]
+    console.print(
+        f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}. Realized PNL: {fiat_symbol} {total_pnl:.2f}"
+    )
+
+
+def log_placed_order(order: Order):
+    console.print(
+        *[
+            Text(
+                order.side.upper(),
+                style="bold red" if order.side == "sell" else "bold green",
+            ),
+            Text(f"{order.quantity:.8f} @ R$ {order.price:.2f}", style="bold white"),
+            Text(f"({order.order_id})", style="dim blue"),
+        ]
+    )
+
+
+def log_position(position: Position, current_price: Decimal):
+    pnl = (
+        position.unrealized_pnl(current_price)
+        if position.exit_order is None
+        else position.realized_pnl
+    )
+    pnl_style = "bold green" if pnl > 0 else "bold red"
+    pnl_str = f"[{pnl_style}]R$ {pnl:.2f}[/{pnl_style}]"
+
+    console.print(
+        f"{position.type.name} {position.entry_order.quantity:.8f} @ R$ {position.entry_order.price:.2f}. PNL: {pnl_str}"
+    )

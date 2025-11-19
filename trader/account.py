@@ -5,17 +5,33 @@ from typing import List
 
 from trader.models.order import Order
 
-from .api.private_api import MercadoBitcoinPrivateAPIBase
+from .api.base_api import PrivateAPIBase
 from .models import OrderSide, Position, PositionType
 
 
 class Account:
     """Classe responsável por gerenciar balanço, posições e execução de ordens"""
 
-    def __init__(self, api: MercadoBitcoinPrivateAPIBase, symbol: str = "BTC-BRL"):
+    def __init__(self, api: PrivateAPIBase, symbol: str = "BTC-BRL"):
         self.api = api
         self.symbol = symbol
-        self.account_id = self.get_api_account_id("BRL")
+        self.coin_symbol, self.fiat_symbol = symbol.split("-")
+
+        # Extrai a moeda base do símbolo (ex: BTC-BRL -> BRL, SOL-USDC -> SOL)
+        # Para Jupiter, a moeda base é a primeira (SOL em SOL-USDC)
+        # Para Mercado Bitcoin, a moeda base é a segunda (BRL em BTC-BRL)
+        parts = symbol.split("-")
+        if len(parts) == 2:
+            # Tenta primeiro com a segunda parte (Mercado Bitcoin)
+            try:
+                self.account_id = self.get_api_account_id(parts[1])
+            except Exception:
+                # Se falhar, tenta com a primeira parte (Jupiter/Solana)
+                self.account_id = self.get_api_account_id(parts[0])
+        else:
+            # Fallback para BRL
+            self.account_id = self.get_api_account_id("BRL")
+
         self.current_position: Position | None = None
         self.position_history: List[Position] = []
 
@@ -49,8 +65,8 @@ class Account:
         ):
             return False
         # Verifica se tem saldo suficiente em BRL
-        brl_balance = self.get_balance("BRL")
-        return brl_balance > Decimal("50.0")  # Mínimo para operar
+        brl_balance = self.get_balance(self.fiat_symbol)
+        return brl_balance > Decimal("10.0")  # Mínimo para operar
 
     def can_sell(self) -> bool:
         """Verifica se é possível executar uma venda"""
@@ -62,7 +78,7 @@ class Account:
             return False
 
         # Verifica se tem BTC suficiente
-        btc_balance = self.get_balance("BTC")
+        btc_balance = self.get_balance(self.coin_symbol)
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
     def place_order(self, price: Decimal, side: OrderSide, quantity: Decimal) -> Order:

@@ -5,7 +5,6 @@ Esta interface requer autenticação e pode ser usada para acessar dados de cont
 
 import json
 import logging
-from abc import ABC, abstractmethod
 from typing import Any
 
 import requests
@@ -18,6 +17,7 @@ from tenacity import (
 )
 
 from ..models.account_data import AccountBalanceData, AccountData
+from .base_api import PrivateAPIBase
 
 
 class UnauthorizedError(Exception):
@@ -26,32 +26,13 @@ class UnauthorizedError(Exception):
     pass
 
 
-class MercadoBitcoinPrivateAPIBase(ABC):
+class MercadoBitcoinPrivateAPIBase(PrivateAPIBase):
     """
     Interface abstrata da API privada do Mercado Bitcoin.
+    Herda de PrivateAPIBase para manter compatibilidade.
     """
 
-    @abstractmethod
-    def get_accounts(self) -> list[AccountData]:
-        """Obtém lista de contas"""
-        ...
-
-    @abstractmethod
-    def get_account_balance(self, account_id: str) -> list[AccountBalanceData]:
-        """Obtém saldo da conta"""
-        ...
-
-    @abstractmethod
-    def place_order(
-        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
-    ) -> str: ...
-
-    @abstractmethod
-    def get_orders(
-        self, symbol: str | None = None, status: str | None = None
-    ) -> dict[str, Any]:
-        """Lista ordens"""
-        ...
+    pass
 
 
 class MercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):

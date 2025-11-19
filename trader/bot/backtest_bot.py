@@ -6,6 +6,7 @@ from rich.progress import Progress
 
 from trader.bot.base_bot import BaseBot
 from trader.models.public_data import Candles
+from trader.notification.notification_service import NullNotificationService
 
 
 class IntervalResolution(Enum):
@@ -38,7 +39,14 @@ class BacktestingBot(BaseBot):
 
     def __init__(self, api, strategy, report, account, start_datetime, end_datetime):
         # Desabilitar logging para backtesting
-        super().__init__(api, strategy, report, account, enable_logging=False)
+        super().__init__(
+            api,
+            strategy,
+            report,
+            account,
+            enable_logging=False,
+            notification_service=NullNotificationService(),
+        )
         self.start_date_datetime = datetime.fromisoformat(start_datetime)
         self.end_date_datetime = datetime.fromisoformat(end_datetime)
 
