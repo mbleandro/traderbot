@@ -1,13 +1,22 @@
 """
-Módulo de modelos de dados para a API do Mercado Bitcoin.
+Módulo de modelos de dados para a API do Mercado Bitcoin e Jupiter.
 """
 
 from .account_data import AccountBalanceData, AccountData
+from .jupiter_data import (
+    JupiterPriceData,
+    JupiterQuoteResponse,
+    JupiterRoutePlan,
+    JupiterSwapInfo,
+    JupiterSwapResponse,
+    JupiterTokenInfo,
+)
 from .order import Order, OrderSide, OrderSignal
 from .position import Position, PositionType
 from .public_data import TickerData
 
 __all__ = [
+    # Mercado Bitcoin
     "TickerData",
     "AccountData",
     "AccountBalanceData",
@@ -16,4 +25,11 @@ __all__ = [
     "OrderSide",
     "Position",
     "PositionType",
+    # Jupiter
+    "JupiterQuoteResponse",
+    "JupiterSwapResponse",
+    "JupiterTokenInfo",
+    "JupiterPriceData",
+    "JupiterSwapInfo",
+    "JupiterRoutePlan",
 ]

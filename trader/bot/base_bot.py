@@ -2,9 +2,10 @@ import logging
 from abc import ABC, abstractmethod
 
 from trader.account import Account
-from trader.api import MercadoBitcoinPublicAPI
+from trader.api.base_api import PublicAPIBase
 from trader.models.position import Position
 from trader.models.public_data import TickerData
+from trader.notification.notification_service import NotificationService
 from trader.report import ReportBase
 from trader.trading_strategy import TradingStrategy
 
@@ -14,10 +15,11 @@ class BaseBot(ABC):
 
     def __init__(
         self,
-        api: MercadoBitcoinPublicAPI,
+        api: PublicAPIBase,
         strategy: TradingStrategy,
         report: ReportBase | None,
         account: Account,
+        notification_service: NotificationService,
         enable_logging: bool = True,
     ):
         self.api = api
@@ -26,6 +28,7 @@ class BaseBot(ABC):
         self.is_running = False
         self.account = account
         self.report = report
+        self.notification_service = notification_service
 
         self.ticker_history: list[TickerData] = []
         self.last_position: Position | None = None
@@ -42,7 +45,7 @@ class BaseBot(ABC):
 
         position_signal = self.strategy.on_market_refresh(
             current_ticker,
-            self.account.get_balance("BRL"),
+            self.account.get_balance("USDC"),
             self.account.get_position(),
             self.account.position_history,
         )
