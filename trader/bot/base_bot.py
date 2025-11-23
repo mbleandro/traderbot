@@ -20,7 +20,6 @@ class BaseBot(ABC):
         report: ReportBase | None,
         account: Account,
         notification_service: NotificationService,
-        enable_logging: bool = True,
     ):
         self.api = api
         self.strategy = strategy

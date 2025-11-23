@@ -44,7 +44,6 @@ class BacktestingBot(BaseBot):
             strategy,
             report,
             account,
-            enable_logging=False,
             notification_service=NullNotificationService(),
         )
         self.start_date_datetime = datetime.fromisoformat(start_datetime)
