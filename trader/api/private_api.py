@@ -5,6 +5,7 @@ Esta interface requer autenticação e pode ser usada para acessar dados de cont
 
 import json
 import logging
+from decimal import Decimal
 from typing import Any
 
 import requests
@@ -117,7 +118,13 @@ class MercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):
         return [AccountBalanceData.from_dict(balance) for balance in response]
 
     def place_order(
-        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
+        self,
+        account_id: str,
+        symbol: str,
+        side: str,
+        type_order: str,
+        quantity: str,
+        price: Decimal,
     ) -> str:
         data = {
             "qty": quantity,

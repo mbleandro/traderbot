@@ -3,15 +3,34 @@ Adaptadores para a API Jupiter que implementam as interfaces base.
 Permite usar Jupiter com a mesma interface do Mercado Bitcoin.
 """
 
+import base64
 import logging
+import os
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List
 
+import requests
+from solana.rpc.api import Client
+from solana.rpc.types import TokenAccountOpts
+from solders.keypair import Keypair
+from solders.message import MessageV0, to_bytes_versioned
+from solders.pubkey import Pubkey
+from solders.transaction import VersionedTransaction
+from spl.token.instructions import (
+    TOKEN_2022_PROGRAM_ID,  # type: ignore
+    TOKEN_PROGRAM_ID,  # type: ignore
+)
+
 from ..models.account_data import AccountBalanceData, AccountData
 from ..models.public_data import Candles, TickerData
 from .base_api import PrivateAPIBase, PublicAPIBase
-from .jupiter_public_api import SOLANA_TOKENS, JupiterPublicAPI
+from .jupiter_public_api import (
+    SOLANA_TOKENS,
+    SOLANA_TOKENS_BY_MINT,
+    SOLANA_TOKENS_DECIMALS,
+    JupiterPublicAPI,
+)
 
 
 class JupiterPublicAPIAdapter(PublicAPIBase):
@@ -36,6 +55,8 @@ class JupiterPublicAPIAdapter(PublicAPIBase):
             "SOL-USDT": (SOLANA_TOKENS["SOL"], SOLANA_TOKENS["USDT"]),
             "BONK-USDC": (SOLANA_TOKENS["BONK"], SOLANA_TOKENS["USDC"]),
             "JUP-USDC": (SOLANA_TOKENS["JUP"], SOLANA_TOKENS["USDC"]),
+            "PUMP-USDC": (SOLANA_TOKENS["PUMP"], SOLANA_TOKENS["USDC"]),
+            "TURBO-USDC": (SOLANA_TOKENS["TURBO"], SOLANA_TOKENS["USDC"]),
         }
 
     def _parse_symbol(self, symbol: str) -> tuple[str, str]:
@@ -82,10 +103,11 @@ class JupiterPublicAPIAdapter(PublicAPIBase):
             TickerData: Dados do ticker
         """
         input_mint, output_mint = self._parse_symbol(symbol)
+        token1, _ = symbol.split("-")
 
         # Obtém quote para 1 unidade do token de entrada
-        # Para SOL: 1 SOL = 1_000_000_000 lamports
-        amount = 1_000_000
+        # Para SOL: 1 SOL = 1_000_000 lamports
+        amount = 10 ** SOLANA_TOKENS_DECIMALS[token1]
 
         try:
             buy_quote = self.jupiter_api.get_quote(
@@ -166,7 +188,7 @@ class JupiterPublicAPIAdapter(PublicAPIBase):
         )
 
 
-class JupiterPrivateAPIAdapter(PrivateAPIBase):
+class JupiterPrivateAPI(PrivateAPIBase):
     """
     Adaptador da API privada Jupiter para a interface base.
 
@@ -182,7 +204,6 @@ class JupiterPrivateAPIAdapter(PrivateAPIBase):
     def __init__(
         self,
         wallet_public_key: str,
-        rpc_url: str = "https://api.mainnet-beta.solana.com",
     ):
         """
         Inicializa o adaptador Jupiter privado.
@@ -192,8 +213,14 @@ class JupiterPrivateAPIAdapter(PrivateAPIBase):
             rpc_url: URL do RPC endpoint da Solana
         """
         self.wallet_public_key = wallet_public_key
-        self.rpc_url = rpc_url
+        self.wallet = Pubkey.from_string(wallet_public_key)
+        self.rpc_url = os.getenv("HELIUS_RPC_URL")
+        assert self.rpc_url, "RPC URL não definida"
+        self.client = Client(self.rpc_url)
         self.logger = logging.getLogger(__name__)
+        private_key = os.getenv("SOLANA_PRIVATE_KEY")
+        assert private_key, "Chave privada não definida"
+        self.keypair = Keypair.from_base58_string(private_key)
 
         # Simula uma conta única (wallets Solana não têm múltiplas contas)
         self._account_id = "solana_wallet"
@@ -205,15 +232,22 @@ class JupiterPrivateAPIAdapter(PrivateAPIBase):
         Returns:
             List[AccountData]: Lista com uma conta simulada
         """
-        return [
-            AccountData(
-                id=self._account_id,
-                currency="USDC",
-                currencySign="◎",
-                name="Solana Wallet",
-                type="wallet",
-            )
-        ]
+        resp = self.client.get_account_info(self.wallet)
+        if resp.value:
+            lamports = resp.value.lamports
+            sol = lamports / 1_000_000
+
+            if sol > 0:
+                return [
+                    AccountData(
+                        id=self.wallet_public_key,
+                        currency="USDC",
+                        currencySign="◎",
+                        name="Solana Wallet",
+                        type="wallet",
+                    )
+                ]
+        return []
 
     def get_account_balance(self, account_id: str) -> List[AccountBalanceData]:
         """
@@ -228,22 +262,80 @@ class JupiterPrivateAPIAdapter(PrivateAPIBase):
         Returns:
             List[AccountBalanceData]: Lista de saldos
         """
-        self.logger.warning(
-            "get_account_balance não implementado para Jupiter. "
-            "Requer integração com Solana RPC para obter saldos de tokens."
-        )
+        balances = []
 
-        # TODO: Implementar chamada RPC para getTokenAccountsByOwner
-        return []
+        # ============================
+        # 1 - Saldo de SOL (lamports)
+        # ============================
+        resp = self.client.get_account_info(self.wallet)
+        if resp.value:
+            lamports = resp.value.lamports
+            sol = lamports / 1_000_000
+
+            if sol > 0:
+                balances.append(
+                    AccountBalanceData(
+                        available=Decimal(str(sol)),
+                        on_hold=Decimal("0"),
+                        symbol="SOL",
+                        total=Decimal(str(sol)),
+                    )
+                )
+
+        # ====================================================
+        # 2 - Listar todas as contas SPL pertencentes à wallet
+        # ====================================================
+        for token in [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID]:
+            token_accounts = self.client.get_token_accounts_by_owner(
+                self.wallet, TokenAccountOpts(program_id=token)
+            )
+
+            for token_acc in token_accounts.value:
+                info = token_acc.account.data  # base64 data
+                decoded = bytes(info)
+
+                # Estrutura da SPL Token Account (primeiros 8 bytes = quantidade)
+                amount = int.from_bytes(decoded[64:72], "little")
+
+                # Mint (posição fixa)
+                mint = Pubkey(decoded[0:32])
+                symbol = SOLANA_TOKENS_BY_MINT.get(str(mint))
+                if not symbol:
+                    continue
+
+                # Para converter o token corretamente, buscamos dados do mint
+                mint_info = self.client.get_account_info(mint)
+
+                if not mint_info.value:
+                    continue
+
+                mint_raw = bytes(mint_info.value.data)
+                decimals = mint_raw[44]
+                real_amount = amount / (10**decimals)
+                if real_amount > 0:
+                    balances.append(
+                        AccountBalanceData(
+                            available=real_amount,
+                            on_hold=Decimal("0"),
+                            symbol=symbol,
+                            total=real_amount,
+                        )
+                    )
+
+        return balances
 
     def place_order(
-        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
+        self,
+        account_id: str,
+        symbol: str,
+        side: str,
+        type_order: str,
+        quantity: str,
+        price: Decimal,
     ) -> str:
         """
         Executa um swap na Jupiter.
 
-        NOTA: Esta é uma implementação simplificada.
-        Para execução real, requer:
         1. Obter quote
         2. Obter transação serializada
         3. Assinar com private key
@@ -259,11 +351,96 @@ class JupiterPrivateAPIAdapter(PrivateAPIBase):
         Returns:
             str: Transaction signature (simulado)
         """
-        raise NotImplementedError(
-            "place_order requer implementação completa de wallet Solana. "
-            "Use JupiterPrivateAPI.get_swap_transaction() diretamente "
-            "e implemente a assinatura/envio com sua própria wallet."
+        mint_in = SOLANA_TOKENS[symbol.split("-")[0]]
+        mint_out = SOLANA_TOKENS[symbol.split("-")[1]]
+
+        if side == "buy":
+            mint_in, mint_out = mint_out, mint_in
+            decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[1]]
+            amount_in = int(Decimal(quantity) * price * (10**decimals))
+        else:
+            decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[0]]
+            amount_in = int(Decimal(quantity) * (10**decimals))
+        return self._do_swap_with_retry(mint_in, mint_out, amount_in)
+
+    def _do_swap_with_retry(self, mint_in: str, mint_out: str, amount_in: int):
+        for i in range(3):
+            try:
+                return self._do_swap(mint_in, mint_out, amount_in, [50, 50, 75][i])
+            except Exception as e:
+                if i == 2:
+                    raise e
+                self.logger.warning(
+                    f"Erro ao executar swap: {e}. Tentando novamente..."
+                )
+        raise Exception("Erro ao executar swap após múltiplas tentativas")
+
+    def _do_swap(
+        self,
+        mint_in: str,
+        mint_out: str,
+        amount_in: int,
+        slippage_bps: int = 50,
+    ):
+        print("→ Criando rota na Jupiter...")
+        quote = requests.get(
+            "https://lite-api.jup.ag/swap/v1/quote",
+            params={
+                "inputMint": mint_in,
+                "outputMint": mint_out,
+                "amount": amount_in,
+                "slippageBps": slippage_bps,
+            },
+        ).json()
+
+        if not quote.get("routePlan"):
+            raise Exception("Nenhuma rota encontrada!")
+
+        print("✓ Rota encontrada.")
+
+        print("→ Gerando transação de swap...")
+        swap_tx = requests.post(
+            "https://lite-api.jup.ag/swap/v1/swap",
+            json={
+                "quoteResponse": quote,
+                "userPublicKey": self.wallet_public_key,
+            },
+        ).json()
+        raw_tx = base64.b64decode(swap_tx["swapTransaction"])
+
+        # ---------- desserializar ----------
+        tx = VersionedTransaction.from_bytes(raw_tx)
+
+        # ---------- assinar ----------
+        print("→ Assinando transação...")
+        latest = self.client.get_latest_blockhash()
+        blockhash = latest.value.blockhash
+        message = tx.message
+        message = MessageV0(
+            header=tx.message.header,
+            account_keys=tx.message.account_keys,
+            recent_blockhash=blockhash,
+            instructions=tx.message.instructions,
+            address_table_lookups=tx.message.address_table_lookups,  # type: ignore
         )
+
+        new_tx = VersionedTransaction(
+            message=message,
+            keypairs=[self.keypair],
+        )
+
+        signature = self.keypair.sign_message(to_bytes_versioned(message))
+
+        new_tx.signatures = [signature]
+
+        # ---------- enviar ----------
+        print("→ Enviando via Helius RPC...")
+        simulation = self.client.simulate_transaction(new_tx)
+        if simulation.value.err:
+            raise Exception(f"Erro ao simular transação: {simulation.value}")
+        resp = self.client.send_raw_transaction(bytes(new_tx))
+        return resp.to_json()
+        # return "FAKE_SIGNATURE"
 
     def get_orders(
         self, symbol: str | None = None, status: str | None = None
@@ -289,7 +466,7 @@ class JupiterPrivateAPIAdapter(PrivateAPIBase):
         return {"orders": []}
 
 
-class FakeJupiterPrivateAPI(JupiterPrivateAPIAdapter):
+class FakeJupiterPrivateAPI(JupiterPrivateAPI):
     """
     Versão fake da API privada Jupiter para testes e backtesting.
     Simula operações sem executar transações reais.
@@ -318,7 +495,13 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPIAdapter):
         return balances
 
     def place_order(
-        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
+        self,
+        account_id: str,
+        symbol: str,
+        side: str,
+        type_order: str,
+        quantity: str,
+        price: Decimal,
     ) -> str:
         """Simula execução de ordem"""
         import uuid

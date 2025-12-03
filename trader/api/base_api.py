@@ -5,6 +5,7 @@ Define contratos comuns que devem ser implementados por todas as APIs (Mercado B
 
 from abc import ABC, abstractmethod
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Dict, List
 
 from ..models.account_data import AccountBalanceData, AccountData
@@ -80,7 +81,13 @@ class PrivateAPIBase(ABC):
 
     @abstractmethod
     def place_order(
-        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
+        self,
+        account_id: str,
+        symbol: str,
+        side: str,
+        type_order: str,
+        quantity: str,
+        price: Decimal,
     ) -> str:
         """
         Executa uma ordem de compra ou venda.

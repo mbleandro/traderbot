@@ -12,7 +12,7 @@ class OrderSide(StrEnum):
 @dataclass
 class OrderSignal:
     side: OrderSide
-    quantity: Decimal
+    quantity: Decimal | None = None
 
 
 @dataclass

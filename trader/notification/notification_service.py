@@ -1,3 +1,6 @@
+import requests
+
+
 class NotificationService:
     def __init__(self, chat_id: str, token: str):
         self.chat_id = chat_id
@@ -21,12 +24,11 @@ class TelegramNotificationService(NotificationService):
         self.url = f"https://api.telegram.org/bot{self.token}"
 
     def send_message(self, message: str) -> None:
-        import requests
-
         try:
-            requests.post(
+            response = requests.post(
                 self.url + "/sendMessage",
                 data={"chat_id": self.chat_id, "text": message},
             )
+            response.raise_for_status()
         except Exception as e:
             print("Erro ao enviar alerta Telegram:", e)

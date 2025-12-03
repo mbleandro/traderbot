@@ -45,12 +45,17 @@ class BaseBot(ABC):
 
         position_signal = self.strategy.on_market_refresh(
             current_ticker,
-            self.account.get_balance("USDC"),
+            None,
             self.account.get_position(),
             self.account.position_history,
         )
         order = None
         if position_signal:
+            if position_signal.quantity is None:
+                position_signal.quantity = self.strategy.calculate_quantity(
+                    self.account.get_balance("USDC"),
+                    current_ticker.last,
+                )
             order = self.account.place_order(
                 current_ticker.last,
                 position_signal.side,
