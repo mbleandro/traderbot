@@ -171,4 +171,18 @@ SOLANA_TOKENS = {
     "USDT": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
     "BONK": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
     "JUP": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+    "PUMP": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
+    "TURBO": "2Dyzu65QA9zdX1UeE7Gx71k7fiwyUK6sZdrvJ7auq5wm",
 }
+
+SOLANA_TOKENS_DECIMALS = {
+    "SOL": 9,
+    "USDC": 6,
+    "USDT": 6,
+    "BONK": 5,
+    "JUP": 6,
+    "PUMP": 6,
+    "TURBO": 8,
+}
+
+SOLANA_TOKENS_BY_MINT = {v: k for k, v in SOLANA_TOKENS.items()}

@@ -49,7 +49,7 @@ class Account:
         balances = self.api.get_account_balance(self.account_id)
         for balance in balances:
             if balance.symbol == currency:
-                return balance.available
+                return Decimal(str(balance.available))
         return Decimal("0.0")
 
     def get_position(self) -> Position | None:
@@ -66,7 +66,7 @@ class Account:
             return False
         # Verifica se tem saldo suficiente em BRL
         brl_balance = self.get_balance(self.fiat_symbol)
-        return brl_balance > Decimal("10.0")  # Mínimo para operar
+        return brl_balance > Decimal("0.1")  # Mínimo para operar
 
     def can_sell(self) -> bool:
         """Verifica se é possível executar uma venda"""
@@ -94,11 +94,12 @@ class Account:
                 side=str(side),
                 type_order="market",
                 quantity=str(quantity),
+                price=price,
             )
             order = Order(
                 order_id=order_id,
                 symbol=self.symbol,
-                quantity=quantity,
+                quantity=quantity * Decimal("0.997"),
                 price=price,
                 side=side,
                 timestamp=datetime.now(),

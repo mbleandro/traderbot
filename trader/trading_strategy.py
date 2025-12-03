@@ -15,10 +15,14 @@ class TradingStrategy(ABC):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal,
+        balance: Decimal | None,
         current_position: Position | None,
         position_history: list[Position],
     ) -> OrderSignal | None:
+        pass
+
+    @abstractmethod
+    def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
         pass
 
 
@@ -172,13 +176,15 @@ class TargetValueStrategy(TradingStrategy):
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
         """Calcula a quantidade a comprar baseado no saldo disponível"""
+        if balance >= Decimal("5"):
+            return Decimal("5") / price
         quantity = (balance * (self.balance_percent / Decimal("100"))) / price
         return quantity
 
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal,
+        balance: Decimal | None,
         current_position: Position | None,
         position_history: list[Position],
     ) -> OrderSignal | None:
@@ -217,10 +223,7 @@ class TargetValueStrategy(TradingStrategy):
                 print(
                     f"Current price: {current_price} <= Target buy: {self.target_buy_price} - BUYING!"
                 )
-                return OrderSignal(
-                    OrderSide.BUY,
-                    self.calculate_quantity(balance, current_price),
-                )
+                return OrderSignal(OrderSide.BUY)
         else:
             # Tem posição aberta, verifica condições de venda
             entry_price = current_position.entry_order.price
@@ -251,11 +254,11 @@ class TargetValueStrategy(TradingStrategy):
                     / self.highest_price_after_target
                 ) * Decimal("100")
 
-                if self.position_periods >= self.max_position_periods:
-                    print(f"Current price: {current_price} - SELLING!")
-                    return OrderSignal(
-                        OrderSide.SELL, current_position.entry_order.quantity
-                    )
+                # if self.position_periods >= self.max_position_periods:
+                #     print(f"Current price: {current_price} - SELLING!")
+                #     return OrderSignal(
+                #         OrderSide.SELL, current_position.entry_order.quantity
+                #     )
 
                 # Ativa stop loss se cair o percentual configurado
                 if drop_percent >= self.stop_loss_percent:

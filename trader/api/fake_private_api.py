@@ -4,6 +4,7 @@ Esta classe simula o comportamento da API real sem fazer requisições HTTP.
 """
 
 import logging
+from decimal import Decimal
 from typing import Any, List
 
 from trader.api.private_api import MercadoBitcoinPrivateAPIBase
@@ -63,7 +64,13 @@ class FakeMercadoBitcoinPrivateAPI(MercadoBitcoinPrivateAPIBase):
         ]
 
     def place_order(
-        self, account_id: str, symbol: str, side: str, type_order: str, quantity: str
+        self,
+        account_id: str,
+        symbol: str,
+        side: str,
+        type_order: str,
+        quantity: str,
+        price: Decimal,
     ) -> str:
         self._order_counter += 1
         order_id = f"fake_order_{self._order_counter}"
