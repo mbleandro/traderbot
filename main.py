@@ -5,7 +5,7 @@ from trader.account import Account
 from trader.api import (
     FakeJupiterPrivateAPI,
     FakeMercadoBitcoinPrivateAPI,
-    JupiterPrivateAPIAdapter,
+    JupiterPrivateAPI,
     JupiterPublicAPIAdapter,
     MercadoBitcoinPrivateAPI,
     MercadoBitcoinPublicAPI,
@@ -49,7 +49,7 @@ def get_api_instances(
     elif api_type == "jupiter":
         public_api = JupiterPublicAPIAdapter(use_pro=False)
         if wallet_key:
-            private_api = JupiterPrivateAPIAdapter(wallet_public_key=wallet_key)
+            private_api = JupiterPrivateAPI(wallet_public_key=wallet_key)
         else:
             private_api = FakeJupiterPrivateAPI()
         return public_api, private_api
@@ -83,9 +83,9 @@ def run(
     api: str = typer.Option(
         "mercadobitcoin", help="API to use: 'mercadobitcoin' or 'jupiter'"
     ),
-    api_key: str | None = typer.Option(..., help="API key (para Mercado Bitcoin)"),
+    api_key: str | None = typer.Option(None, help="API key (para Mercado Bitcoin)"),
     api_secret: str | None = typer.Option(
-        ..., help="API secret (para Mercado Bitcoin)"
+        None, help="API secret (para Mercado Bitcoin)"
     ),
     wallet_key: str | None = typer.Option(
         ..., help="Chave pública da wallet (para Jupiter)"

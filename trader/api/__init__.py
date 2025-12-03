@@ -6,10 +6,9 @@ from .base_api import PrivateAPIBase, PublicAPIBase
 from .fake_private_api import FakeMercadoBitcoinPrivateAPI
 from .jupiter_adapter import (
     FakeJupiterPrivateAPI,
-    JupiterPrivateAPIAdapter,
+    JupiterPrivateAPI,
     JupiterPublicAPIAdapter,
 )
-from .jupiter_private_api import JupiterPrivateAPI, JupiterTransactionError
 from .jupiter_public_api import SOLANA_TOKENS, JupiterPublicAPI
 from .private_api import MercadoBitcoinPrivateAPI, UnauthorizedError
 from .public_api import MercadoBitcoinPublicAPI
@@ -26,10 +25,8 @@ __all__ = [
     # Jupiter (APIs nativas)
     "JupiterPublicAPI",
     "JupiterPrivateAPI",
-    "JupiterTransactionError",
     "SOLANA_TOKENS",
     # Jupiter (Adaptadores compatíveis)
     "JupiterPublicAPIAdapter",
-    "JupiterPrivateAPIAdapter",
     "FakeJupiterPrivateAPI",
 ]
