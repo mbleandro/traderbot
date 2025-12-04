@@ -6,6 +6,7 @@ Permite usar Jupiter com a mesma interface do Mercado Bitcoin.
 import base64
 import logging
 import os
+import time
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List
@@ -17,6 +18,7 @@ from solders.keypair import Keypair
 from solders.message import MessageV0, to_bytes_versioned
 from solders.pubkey import Pubkey
 from solders.transaction import VersionedTransaction
+from solders.transaction_status import TransactionConfirmationStatus
 from spl.token.instructions import (
     TOKEN_2022_PROGRAM_ID,  # type: ignore
     TOKEN_PROGRAM_ID,  # type: ignore
@@ -375,6 +377,29 @@ class JupiterPrivateAPI(PrivateAPIBase):
                 )
         raise Exception("Erro ao executar swap após múltiplas tentativas")
 
+    def _wait_for_confirmation(self, signature, timeout=30):
+        start = time.time()
+
+        while True:
+            result = self.client.get_signature_statuses([signature])
+            status = result.value[0]
+
+            if status is not None:
+                # Se a transação foi processada
+                if status.confirmation_status in [
+                    TransactionConfirmationStatus.Confirmed,
+                    TransactionConfirmationStatus.Finalized,
+                ]:
+                    return True
+                if status.err is not None:
+                    raise Exception(f"Transação falhou: {status.err}")
+
+            # Timeout
+            if time.time() - start > timeout:
+                raise TimeoutError("Transação não foi confirmada a tempo.")
+
+            time.sleep(1)
+
     def _do_swap(
         self,
         mint_in: str,
@@ -439,6 +464,12 @@ class JupiterPrivateAPI(PrivateAPIBase):
         if simulation.value.err:
             raise Exception(f"Erro ao simular transação: {simulation.value}")
         resp = self.client.send_raw_transaction(bytes(new_tx))
+        signature = resp.value
+
+        print(f"✓ Transação enviada: {signature}")
+        print("→ Aguardando confirmação...")
+
+        self._wait_for_confirmation(signature)
         return resp.to_json()
         # return "FAKE_SIGNATURE"
 
