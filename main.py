@@ -4,11 +4,8 @@ from trader import get_strategy_cls
 from trader.account import Account
 from trader.api import (
     FakeJupiterPrivateAPI,
-    FakeMercadoBitcoinPrivateAPI,
     JupiterPrivateAPI,
     JupiterPublicAPIAdapter,
-    MercadoBitcoinPrivateAPI,
-    MercadoBitcoinPublicAPI,
 )
 from trader.bot import BacktestingBot, BaseBot, TradingBot, WebsocketTradingBot
 from trader.notification.notification_service import (
@@ -30,23 +27,13 @@ def get_api_instances(
     Retorna instâncias das APIs pública e privada baseado no tipo.
 
     Args:
-        api_type: 'mercadobitcoin' ou 'jupiter'
-        api_key: Chave da API (para Mercado Bitcoin)
-        api_secret: Secret da API (para Mercado Bitcoin)
+        api_type: 'jupiter' ou 'jupiter'
         wallet_key: Chave pública da wallet (para Jupiter)
 
     Returns:
         Tuple (public_api, private_api)
     """
-    if api_type == "mercadobitcoin":
-        public_api = MercadoBitcoinPublicAPI()
-        if api_key and api_secret:
-            private_api = MercadoBitcoinPrivateAPI(api_key, api_secret)
-        else:
-            private_api = FakeMercadoBitcoinPrivateAPI()
-        return public_api, private_api
-
-    elif api_type == "jupiter":
+    if api_type == "jupiter":
         public_api = JupiterPublicAPIAdapter(use_pro=False)
         if wallet_key:
             private_api = JupiterPrivateAPI(wallet_public_key=wallet_key)
@@ -55,9 +42,7 @@ def get_api_instances(
         return public_api, private_api
 
     else:
-        raise ValueError(
-            f"API type '{api_type}' não suportado. Use 'mercadobitcoin' ou 'jupiter'"
-        )
+        raise ValueError(f"API type '{api_type}' não suportado. Use 'jupiter'")
 
 
 def _get_notification_svc(
@@ -80,9 +65,7 @@ def run(
     ),
     strategy: str = typer.Argument(..., help="The trading strategy to use"),
     interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
-    api: str = typer.Option(
-        "mercadobitcoin", help="API to use: 'mercadobitcoin' or 'jupiter'"
-    ),
+    api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
     api_key: str | None = typer.Option(None, help="API key (para Mercado Bitcoin)"),
     api_secret: str | None = typer.Option(
         None, help="API secret (para Mercado Bitcoin)"
@@ -105,19 +88,11 @@ def run(
     Executa o bot em modo produção.
 
     Exemplos:
-        # Mercado Bitcoin
-        uv run python main.py run BTC-BRL dynamic_target 60 --api mercadobitcoin --api-key=KEY --api-secret=SECRET 'ema_period=20'
-
         # Jupiter
         uv run python main.py run SOL-USDC dynamic_target 60 --api jupiter --wallet-key=WALLET_PUBLIC_KEY 'ema_period=20'
     """
     # Validação de credenciais
-    if api == "mercadobitcoin":
-        if not api_key or not api_secret:
-            raise ValueError(
-                "Para Mercado Bitcoin, api_key e api_secret são obrigatórios"
-            )
-    elif api == "jupiter":
+    if api == "jupiter":
         if not wallet_key:
             raise ValueError("Para Jupiter, wallet_key é obrigatório")
 
@@ -147,9 +122,7 @@ def backtest(
     interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
     start_datetime: str | None = typer.Argument(..., help="Data e hora de início"),
     end_datetime: str | None = typer.Argument(..., help="Data e hora de fim"),
-    api: str = typer.Option(
-        "mercadobitcoin", help="API to use: 'mercadobitcoin' or 'jupiter'"
-    ),
+    api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
     """
@@ -178,9 +151,7 @@ def fake(
     currency: str,
     strategy: str,
     interval: int,
-    api: str = typer.Option(
-        "mercadobitcoin", help="API to use: 'mercadobitcoin' or 'jupiter'"
-    ),
+    api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
     websocket: bool = typer.Option(
         False, help="Use WebSocket para atualização de preços"
     ),
@@ -196,9 +167,6 @@ def fake(
     Executa o bot em modo fake (simulação com dados reais).
 
     Exemplos:
-        # Mercado Bitcoin
-        uv run python main.py fake BTC-BRL dynamic_target 60 --api mercadobitcoin 'ema_period=20'
-
         # Jupiter
         uv run python main.py fake SOL-USDC dynamic_target 60 --api jupiter 'ema_period=20'
     """
