@@ -151,105 +151,39 @@ class TestPlaceOrder:
         tx = self.api._get_swap_transaction(quote={"routePlan": "test_route"})
         assert isinstance(tx, VersionedTransaction)
 
-    # def test_get_signed_transaction(self):
-    #     receiver = Pubkey.new_unique()
-    #     client = LiteSVM()
-    #     payer = Keypair()
-    #     client.airdrop(payer.pubkey(), 1_000_000_000)
-    #     blockhash = client.latest_blockhash()
+    def test_get_signed_transaction(self):
+        keypair = Keypair()
+        receiver = Pubkey.new_unique()
 
-    #     self.api.client = client  # type: ignore # mock do client solana
-    #     self.api.client.get_latest_blockhash = lambda: SimpleNamespace(
-    #         value=SimpleNamespace(blockhash=blockhash)
-    #     )  # type: ignore
-    #     transfer_lamports = 1_000_000
-    #     ixs = [
-    #         transfer(
-    #             {
-    #                 "from_pubkey": payer.pubkey(),
-    #                 "to_pubkey": receiver,
-    #                 "lamports": transfer_lamports,
-    #             }
-    #         )
-    #     ]
-    #     # msg = MessageV0.new_with_blockhash(ixs, payer.pubkey(), blockhash)
+        api = JupiterPrivateAPI(wallet_public_key=str(keypair.pubkey()))
+        api.keypair = keypair
+        ixs = [
+            transfer(
+                {
+                    "from_pubkey": keypair.pubkey(),
+                    "to_pubkey": receiver,
+                    "lamports": 100_000,
+                }
+            )
+        ]
 
-    #     # program_id = Pubkey.default()
-    #     # arbitrary_instruction_data = bytes([1])
-    #     # accounts = []
-    #     instructions = [
-    #         CompiledInstruction(
-    #             program_id_index=4, accounts=bytes([1, 2, 3, 5, 6]), data=bytes([])
-    #         )
-    #     ]
-    #     self.api.wallet = payer.pubkey()
-    #     account_keys = [self.api.wallet]
-    #     header = MessageHeader(1, 0, 0)
-    #     lookups = [
-    #         MessageAddressTableLookup(self.api.wallet, bytes([1, 2, 3]), bytes([0]))
-    #     ]
-    #     message = MessageV0(header, account_keys, blockhash, instructions, lookups)
-    #     tx = VersionedTransaction(message, [payer])
-    #     tx = self.api._get_signed_transaction(tx=tx)
-    #     assert isinstance(tx, VersionedTransaction)
-
-
-# def test_transfer() -> None:
-#     receiver = Pubkey.new_unique()
-#     client = LiteSVM()
-#     payer = Keypair()
-#     client.airdrop(payer.pubkey(), 1_000_000_000)
-#     blockhash = client.latest_blockhash()
-#     transfer_lamports = 1_000_000
-#     ixs = [
-#         transfer(
-#             {
-#                 "from_pubkey": payer.pubkey(),
-#                 "to_pubkey": receiver,
-#                 "lamports": transfer_lamports,
-#             }
-#         )
-#     ]
-#     msg = Message.new_with_blockhash(ixs, payer.pubkey(), blockhash)
-#     tx = VersionedTransaction(msg, [payer])
-#     client.send_transaction(tx)
-#     balance_after = client.get_balance(receiver)
-#     assert balance_after == transfer_lamports
-
-
-def test_get_signed_transaction(setenvvar):
-    keypair = Keypair()
-    receiver = Pubkey.new_unique()
-
-    api = JupiterPrivateAPI(wallet_public_key=str(keypair.pubkey()))
-    api.keypair = keypair
-    ixs = [
-        transfer(
-            {
-                "from_pubkey": keypair.pubkey(),
-                "to_pubkey": receiver,
-                "lamports": 100_000,
-            }
+        client = LiteSVM()
+        client.airdrop(keypair.pubkey(), 1_000_000_000)
+        blockhash = client.latest_blockhash()
+        api.client.get_latest_blockhash = lambda: SimpleNamespace(
+            value=SimpleNamespace(blockhash=blockhash)
+        )  # type: ignore
+        msg = Message.new_with_blockhash(ixs, keypair.pubkey(), blockhash)
+        message = MessageV0(
+            header=msg.header,
+            account_keys=msg.account_keys,
+            recent_blockhash=blockhash,
+            instructions=msg.instructions,
+            address_table_lookups=[],
         )
-    ]
-
-    client = LiteSVM()
-    client.airdrop(keypair.pubkey(), 1_000_000_000)
-    blockhash = client.latest_blockhash()
-    api.client.get_latest_blockhash = lambda: SimpleNamespace(
-        value=SimpleNamespace(blockhash=blockhash)
-    )  # type: ignore
-    msg = Message.new_with_blockhash(ixs, keypair.pubkey(), blockhash)
-    message = MessageV0(
-        header=msg.header,
-        account_keys=msg.account_keys,
-        recent_blockhash=blockhash,
-        instructions=msg.instructions,
-        address_table_lookups=[],
-    )
-    tx = VersionedTransaction(message, [keypair])
-    signed_tx = api._get_signed_transaction(tx=tx)
-    assert isinstance(signed_tx, VersionedTransaction)
-    assert signed_tx.signatures[0].verify(
-        keypair.pubkey(), to_bytes_versioned(signed_tx.message)
-    )
+        tx = VersionedTransaction(message, [keypair])
+        signed_tx = api._get_signed_transaction(tx=tx)
+        assert isinstance(signed_tx, VersionedTransaction)
+        assert signed_tx.signatures[0].verify(
+            keypair.pubkey(), to_bytes_versioned(signed_tx.message)
+        )
