@@ -400,7 +400,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
             time.sleep(1)
 
-    def _do_swap(
+    def _get_quote_with_route(
         self,
         mint_in: str,
         mint_out: str,
@@ -422,7 +422,9 @@ class JupiterPrivateAPI(PrivateAPIBase):
             raise Exception("Nenhuma rota encontrada!")
 
         print("✓ Rota encontrada.")
+        return quote
 
+    def _get_swap_transaction(self, quote: Dict[str, Any]) -> VersionedTransaction:
         print("→ Gerando transação de swap...")
         swap_tx = requests.post(
             "https://lite-api.jup.ag/swap/v1/swap",
@@ -435,7 +437,9 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
         # ---------- desserializar ----------
         tx = VersionedTransaction.from_bytes(raw_tx)
+        return tx
 
+    def _get_signed_transaction(self, tx: VersionedTransaction) -> VersionedTransaction:
         # ---------- assinar ----------
         print("→ Assinando transação...")
         latest = self.client.get_latest_blockhash()
@@ -457,6 +461,18 @@ class JupiterPrivateAPI(PrivateAPIBase):
         signature = self.keypair.sign_message(to_bytes_versioned(message))
 
         new_tx.signatures = [signature]
+        return new_tx
+
+    def _do_swap(
+        self,
+        mint_in: str,
+        mint_out: str,
+        amount_in: int,
+        slippage_bps: int = 50,
+    ):
+        quote = self._get_quote_with_route(mint_in, mint_out, amount_in, slippage_bps)
+        tx = self._get_swap_transaction(quote)
+        new_tx = self._get_signed_transaction(tx)
 
         # ---------- enviar ----------
         print("→ Enviando via Helius RPC...")
