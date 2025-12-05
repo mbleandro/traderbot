@@ -17,6 +17,7 @@ from solana.rpc.types import TokenAccountOpts
 from solders.keypair import Keypair
 from solders.message import MessageV0, to_bytes_versioned
 from solders.pubkey import Pubkey
+from solders.solders import SendTransactionResp
 from solders.transaction import VersionedTransaction
 from solders.transaction_status import TransactionConfirmationStatus
 from spl.token.instructions import (
@@ -378,6 +379,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
         raise Exception("Erro ao executar swap após múltiplas tentativas")
 
     def _wait_for_confirmation(self, signature, timeout=30):
+        print("→ Aguardando confirmação...")
         start = time.time()
 
         while True:
@@ -463,6 +465,20 @@ class JupiterPrivateAPI(PrivateAPIBase):
         new_tx.signatures = [signature]
         return new_tx
 
+    def _send_signed_transaction(
+        self, new_tx: VersionedTransaction
+    ) -> SendTransactionResp:
+        # ---------- enviar ----------
+        print("→ Enviando via Helius RPC...")
+        simulation = self.client.simulate_transaction(new_tx)
+        if simulation.value.err:
+            raise Exception(f"Erro ao simular transação: {simulation.value}")
+        resp = self.client.send_raw_transaction(bytes(new_tx))
+        signature = resp.value
+
+        print(f"✓ Transação enviada: {signature}")
+        return resp
+
     def _do_swap(
         self,
         mint_in: str,
@@ -473,18 +489,9 @@ class JupiterPrivateAPI(PrivateAPIBase):
         quote = self._get_quote_with_route(mint_in, mint_out, amount_in, slippage_bps)
         tx = self._get_swap_transaction(quote)
         new_tx = self._get_signed_transaction(tx)
+        resp = self._send_signed_transaction(new_tx)
 
-        # ---------- enviar ----------
-        print("→ Enviando via Helius RPC...")
-        simulation = self.client.simulate_transaction(new_tx)
-        if simulation.value.err:
-            raise Exception(f"Erro ao simular transação: {simulation.value}")
-        resp = self.client.send_raw_transaction(bytes(new_tx))
         signature = resp.value
-
-        print(f"✓ Transação enviada: {signature}")
-        print("→ Aguardando confirmação...")
-
         self._wait_for_confirmation(signature)
         return resp.to_json()
         # return "FAKE_SIGNATURE"

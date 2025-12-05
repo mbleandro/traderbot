@@ -187,3 +187,41 @@ class TestPlaceOrder:
         assert signed_tx.signatures[0].verify(
             keypair.pubkey(), to_bytes_versioned(signed_tx.message)
         )
+
+    def test_send_signed_transaction(self):
+        keypair = Keypair()
+        receiver = Pubkey.new_unique()
+
+        api = JupiterPrivateAPI(wallet_public_key=str(keypair.pubkey()))
+        api.keypair = keypair
+        ixs = [
+            transfer(
+                {
+                    "from_pubkey": keypair.pubkey(),
+                    "to_pubkey": receiver,
+                    "lamports": 100_000,
+                }
+            )
+        ]
+
+        client = LiteSVM()
+        client.airdrop(keypair.pubkey(), 1_000_000_000)
+        blockhash = client.latest_blockhash()
+        msg = Message.new_with_blockhash(ixs, keypair.pubkey(), blockhash)
+        tx = VersionedTransaction(msg, [keypair])
+        tx.signatures = [keypair.sign_message(to_bytes_versioned(msg))]
+
+        def _simulate_transaction(x):
+            # signature = client.simulate_transaction(x).meta().signature()
+
+            return SimpleNamespace(value=SimpleNamespace(err=None))
+
+        def _send_raw_transaction(x):
+            signature = client.simulate_transaction(tx).meta().signature()
+
+            return SimpleNamespace(value=signature)
+
+        api.client.simulate_transaction = _simulate_transaction  # type: ignore
+        api.client.send_raw_transaction = _send_raw_transaction  # type: ignore
+        resp = api._send_signed_transaction(tx)
+        assert resp.value is not None
