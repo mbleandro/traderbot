@@ -1,3 +1,4 @@
+import random
 from abc import ABC, abstractmethod
 from decimal import Decimal
 
@@ -38,12 +39,10 @@ class IterationStrategy(TradingStrategy):
     """
 
     def __init__(self, sell_on_iteration: int, buy_on_iteration: int):
-        self.sell_on_iteration = sell_on_iteration
-        self.buy_on_iteration = buy_on_iteration
         self.price_history: list[Decimal] = []
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
-        quantity = (balance * Decimal("0.8")) / price
+        quantity = (Decimal("1000.8") * Decimal("0.8")) / price
         return quantity
 
     def on_market_refresh(
@@ -55,14 +54,14 @@ class IterationStrategy(TradingStrategy):
     ) -> OrderSignal | None:
         self.price_history.append(ticker.last)
         if not current_position:
-            if len(self.price_history) > self.buy_on_iteration:
+            if random.randint(1, 100) <= 50:  # 50% de chance de comprar
                 self.price_history = []
                 return OrderSignal(
                     OrderSide.BUY,
                     self.calculate_quantity(balance, ticker.last),
                 )
         else:
-            if len(self.price_history) > self.sell_on_iteration:
+            if random.randint(1, 100) <= 70:  # 70% de chance de vender
                 self.price_history = []
                 return OrderSignal(
                     OrderSide.SELL, current_position.entry_order.quantity
