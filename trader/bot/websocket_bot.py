@@ -19,8 +19,8 @@ console = Console()
 
 
 class WebsocketTradingBot(BaseBot):
-    def __init__(self, api, strategy, report, account, notification_service):
-        super().__init__(api, strategy, report, account, notification_service)
+    def __init__(self, api, strategy, account, notification_service):
+        super().__init__(api, strategy, account, notification_service)
         self.in_symbol, self.out_symbol = self.symbol.split("-")
         self.token = {
             "SOL": "So11111111111111111111111111111111111111112",
