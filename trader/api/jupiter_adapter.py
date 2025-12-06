@@ -17,7 +17,7 @@ from solana.rpc.types import TokenAccountOpts
 from solders.keypair import Keypair
 from solders.message import MessageV0, to_bytes_versioned
 from solders.pubkey import Pubkey
-from solders.solders import SendTransactionResp
+from solders.solders import LiteSVM, SendTransactionResp
 from solders.transaction import VersionedTransaction
 from solders.transaction_status import TransactionConfirmationStatus
 from spl.token.instructions import (
@@ -526,13 +526,32 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
     Simula operações sem executar transações reais.
     """
 
-    def __init__(self):
-        super().__init__(wallet_public_key="FAKE_WALLET_KEY")
+    def __init__(
+        self,
+    ):
+        self.logger = logging.getLogger(__name__)
+        self.keypair = Keypair()
+        self.wallet = self.keypair.pubkey()
+        self.wallet_public_key = str(self.wallet)
+        self.client = LiteSVM()
+
+        self._account_id = "solana_wallet"
         self._balances: Dict[str, Decimal] = {
             "SOL": Decimal("10.0"),
             "USDC": Decimal("100.0"),
             "BONK": Decimal("1000"),
         }
+
+    def get_accounts(self) -> List[AccountData]:
+        return [
+            AccountData(
+                id=self.wallet_public_key,
+                currency="USDC",
+                currencySign="◎",
+                name="Solana Wallet",
+                type="wallet",
+            )
+        ]
 
     def get_account_balance(self, account_id: str) -> List[AccountBalanceData]:
         """Retorna saldos simulados"""
@@ -565,7 +584,11 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
             f"[FAKE] Order placed: {side} {quantity} {symbol} - ID: {order_id}"
         )
 
-        # Atualiza saldos simulados
-        # TODO: Implementar lógica de atualização de saldo
+        # TODO: utilizar LiteSVM para simular mudanças reais
 
         return order_id
+
+    def get_orders(
+        self, symbol: str | None = None, status: str | None = None
+    ) -> Dict[str, Any]:
+        return {"orders": []}
