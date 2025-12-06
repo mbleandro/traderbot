@@ -17,6 +17,7 @@ from solana.rpc.types import TokenAccountOpts
 from solders.keypair import Keypair
 from solders.message import MessageV0, to_bytes_versioned
 from solders.pubkey import Pubkey
+from solders.solders import LiteSVM, SendTransactionResp
 from solders.transaction import VersionedTransaction
 from solders.transaction_status import TransactionConfirmationStatus
 from spl.token.instructions import (
@@ -378,6 +379,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
         raise Exception("Erro ao executar swap após múltiplas tentativas")
 
     def _wait_for_confirmation(self, signature, timeout=30):
+        print("→ Aguardando confirmação...")
         start = time.time()
 
         while True:
@@ -400,7 +402,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
             time.sleep(1)
 
-    def _do_swap(
+    def _get_quote_with_route(
         self,
         mint_in: str,
         mint_out: str,
@@ -422,7 +424,9 @@ class JupiterPrivateAPI(PrivateAPIBase):
             raise Exception("Nenhuma rota encontrada!")
 
         print("✓ Rota encontrada.")
+        return quote
 
+    def _get_swap_transaction(self, quote: Dict[str, Any]) -> VersionedTransaction:
         print("→ Gerando transação de swap...")
         swap_tx = requests.post(
             "https://lite-api.jup.ag/swap/v1/swap",
@@ -435,7 +439,9 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
         # ---------- desserializar ----------
         tx = VersionedTransaction.from_bytes(raw_tx)
+        return tx
 
+    def _get_signed_transaction(self, tx: VersionedTransaction) -> VersionedTransaction:
         # ---------- assinar ----------
         print("→ Assinando transação...")
         latest = self.client.get_latest_blockhash()
@@ -457,7 +463,11 @@ class JupiterPrivateAPI(PrivateAPIBase):
         signature = self.keypair.sign_message(to_bytes_versioned(message))
 
         new_tx.signatures = [signature]
+        return new_tx
 
+    def _send_signed_transaction(
+        self, new_tx: VersionedTransaction
+    ) -> SendTransactionResp:
         # ---------- enviar ----------
         print("→ Enviando via Helius RPC...")
         simulation = self.client.simulate_transaction(new_tx)
@@ -467,8 +477,21 @@ class JupiterPrivateAPI(PrivateAPIBase):
         signature = resp.value
 
         print(f"✓ Transação enviada: {signature}")
-        print("→ Aguardando confirmação...")
+        return resp
 
+    def _do_swap(
+        self,
+        mint_in: str,
+        mint_out: str,
+        amount_in: int,
+        slippage_bps: int = 50,
+    ):
+        quote = self._get_quote_with_route(mint_in, mint_out, amount_in, slippage_bps)
+        tx = self._get_swap_transaction(quote)
+        new_tx = self._get_signed_transaction(tx)
+        resp = self._send_signed_transaction(new_tx)
+
+        signature = resp.value
         self._wait_for_confirmation(signature)
         return resp.to_json()
         # return "FAKE_SIGNATURE"
@@ -503,13 +526,32 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
     Simula operações sem executar transações reais.
     """
 
-    def __init__(self):
-        super().__init__(wallet_public_key="FAKE_WALLET_KEY")
+    def __init__(
+        self,
+    ):
+        self.logger = logging.getLogger(__name__)
+        self.keypair = Keypair()
+        self.wallet = self.keypair.pubkey()
+        self.wallet_public_key = str(self.wallet)
+        self.client = LiteSVM()
+
+        self._account_id = "solana_wallet"
         self._balances: Dict[str, Decimal] = {
             "SOL": Decimal("10.0"),
             "USDC": Decimal("100.0"),
             "BONK": Decimal("1000"),
         }
+
+    def get_accounts(self) -> List[AccountData]:
+        return [
+            AccountData(
+                id=self.wallet_public_key,
+                currency="USDC",
+                currencySign="◎",
+                name="Solana Wallet",
+                type="wallet",
+            )
+        ]
 
     def get_account_balance(self, account_id: str) -> List[AccountBalanceData]:
         """Retorna saldos simulados"""
@@ -542,7 +584,11 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
             f"[FAKE] Order placed: {side} {quantity} {symbol} - ID: {order_id}"
         )
 
-        # Atualiza saldos simulados
-        # TODO: Implementar lógica de atualização de saldo
+        # TODO: utilizar LiteSVM para simular mudanças reais
 
         return order_id
+
+    def get_orders(
+        self, symbol: str | None = None, status: str | None = None
+    ) -> Dict[str, Any]:
+        return {"orders": []}

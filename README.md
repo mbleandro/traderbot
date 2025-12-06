@@ -1,43 +1,17 @@
 # Trader
 
-Trading bot para Mercado Bitcoin
-
-## Estrutura do Projeto
-
-```
-traderbot/
-├── trader/                  # Código principal do bot
-└── pyproject.toml          # Dependências e configuração do projeto
-```
-
-
-## Mapa de Features
-| Feature                             | Status |
-|-------------------------------------|--------|
-| Compra e Venda                      | ✅     |
-| Conta Fake                          | ✅     |
-| Subcontas                           | ❌     |
-| Backtesting                         | ✅     |
-| Relatórios de performance           | ❌     |
-| Multiplos bots                      | ❌     |
-| Stop loss nativo da API             | ❌     |
-| Histórico de posições persistente   | ❌     |
-| Orientado a mudança de preço        | ❌     |
+Trading bot
 
 ## Instalação
 ```bash
-make install
+uv sync
 ```
 
 ## Desenvolvimento
 ```bash
-make install-dev
+uv sync --extra dev
 ```
 
-## Uso
-```bash
-make run
-```
 
 ## Linting e Formatação
 Este projeto usa **Ruff** como linter e formatter e **pyright** para verificação de tipos.
@@ -61,15 +35,6 @@ make typing-check
 # Executar lint e format em sequência
 make ruff
 ```
-
-### Configuração
-
-A configuração do Ruff está no arquivo `pyproject.toml` e inclui:
-
-- **Linting**: Regras do pycodestyle, Pyflakes, isort, flake8-bugbear, etc.
-- **Formatting**: Estilo similar ao Black (aspas duplas, indentação com espaços)
-- **Import sorting**: Organização automática de imports
-- **Line length**: 88 caracteres (padrão do Black)
 
 ### Hook de Pré-commit
 

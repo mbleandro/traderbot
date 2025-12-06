@@ -37,12 +37,11 @@ class IntervalResolution(Enum):
 class BacktestingBot(BaseBot):
     """Bot para backtesting com dados históricos"""
 
-    def __init__(self, api, strategy, report, account, start_datetime, end_datetime):
+    def __init__(self, api, strategy, account, start_datetime, end_datetime):
         # Desabilitar logging para backtesting
         super().__init__(
             api,
             strategy,
-            report,
             account,
             notification_service=NullNotificationService(),
         )

@@ -6,7 +6,6 @@ from trader.api.base_api import PublicAPIBase
 from trader.models.position import Position
 from trader.models.public_data import TickerData
 from trader.notification.notification_service import NotificationService
-from trader.report import ReportBase
 from trader.trading_strategy import TradingStrategy
 
 
@@ -17,7 +16,6 @@ class BaseBot(ABC):
         self,
         api: PublicAPIBase,
         strategy: TradingStrategy,
-        report: ReportBase | None,
         account: Account,
         notification_service: NotificationService,
     ):
@@ -26,7 +24,6 @@ class BaseBot(ABC):
         self.symbol = account.symbol
         self.is_running = False
         self.account = account
-        self.report = report
         self.notification_service = notification_service
 
         self.ticker_history: list[TickerData] = []
@@ -65,7 +62,3 @@ class BaseBot(ABC):
     def stop(self):
         """Para o bot"""
         self.is_running = False
-        if self.report:
-            self.report.add_ticker_history(self.ticker_history)
-            self.report.add_position_history(self.account.position_history)
-            self.report.generate_report()
