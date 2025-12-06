@@ -7,7 +7,7 @@ from trader.api import (
     JupiterPrivateAPI,
     JupiterPublicAPIAdapter,
 )
-from trader.bot import BacktestingBot, BaseBot, TradingBot, WebsocketTradingBot
+from trader.bot import BaseBot, TradingBot, WebsocketTradingBot
 from trader.notification.notification_service import (
     NullNotificationService,
     TelegramNotificationService,
@@ -104,38 +104,6 @@ def run(
         bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
     else:
         bot = TradingBot(public_api, strategy_obj, account, notification_svc)
-    run_bot(bot, interval)
-
-
-@app.command()
-def backtest(
-    currency: str = typer.Argument(
-        "BTC-BRL", help="The trading symbol (ex: BTC-BRL for MB, SOL-USDC for Jupiter)"
-    ),
-    strategy: str = typer.Argument(..., help="The trading strategy to use"),
-    interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
-    start_datetime: str | None = typer.Argument(..., help="Data e hora de início"),
-    end_datetime: str | None = typer.Argument(..., help="Data e hora de fim"),
-    api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
-    strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
-):
-    """
-    Executa backtest com dados históricos.
-
-    NOTA: Jupiter não fornece dados históricos de candles.
-    Para backtesting com Jupiter, use dados de provedores externos.
-
-    Exemplos:
-        # Mercado Bitcoin
-        uv run python main.py backtest BTC-BRL dynamic_target 3600 2025-06-01 2025-06-15 --api mercadobitcoin 'ema_period=20'
-    """
-    public_api, private_api = get_api_instances(api)
-    account = Account(private_api, currency)
-    strategy_obj = _get_strategy_obj(strategy, strategy_args)
-
-    bot = BacktestingBot(
-        public_api, strategy_obj, account, start_datetime, end_datetime
-    )
     run_bot(bot, interval)
 
 
