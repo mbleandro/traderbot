@@ -27,22 +27,14 @@ class TradingStrategy(ABC):
         pass
 
 
-class IterationStrategy(TradingStrategy):
-    """
-    Estratégia baseada em número de iterações.
-
-    Compra na primeira oportunidade e vende após um número específico de iterações.
-    Utiliza 80% do saldo disponível para cada operação de compra.
-
-    Args:
-        sell_on_iteration (int): Número de iterações para vender
-    """
-
-    def __init__(self, sell_on_iteration: int, buy_on_iteration: int):
+class RandomStrategy(TradingStrategy):
+    def __init__(self, sell_chance: int, buy_chance: int):
+        self.buy_chance = buy_chance
+        self.sell_chance = sell_chance
         self.price_history: list[Decimal] = []
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
-        quantity = (Decimal("1000.8") * Decimal("0.8")) / price
+        quantity = (balance * Decimal("0.8")) / price
         return quantity
 
     def on_market_refresh(
@@ -54,14 +46,11 @@ class IterationStrategy(TradingStrategy):
     ) -> OrderSignal | None:
         self.price_history.append(ticker.last)
         if not current_position:
-            if random.randint(1, 100) <= 50:  # 50% de chance de comprar
+            if random.randint(1, 100) <= self.buy_chance:  # 50% de chance de comprar
                 self.price_history = []
-                return OrderSignal(
-                    OrderSide.BUY,
-                    self.calculate_quantity(balance, ticker.last),
-                )
+                return OrderSignal(OrderSide.BUY)
         else:
-            if random.randint(1, 100) <= 70:  # 70% de chance de vender
+            if random.randint(1, 100) <= self.sell_chance:  # 70% de chance de vender
                 self.price_history = []
                 return OrderSignal(
                     OrderSide.SELL, current_position.entry_order.quantity
