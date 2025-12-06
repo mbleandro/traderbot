@@ -46,11 +46,11 @@ class RandomStrategy(TradingStrategy):
     ) -> OrderSignal | None:
         self.price_history.append(ticker.last)
         if not current_position:
-            if random.randint(1, 100) <= self.buy_chance:  # 50% de chance de comprar
+            if random.randint(1, 100) <= int(self.buy_chance):
                 self.price_history = []
                 return OrderSignal(OrderSide.BUY)
         else:
-            if random.randint(1, 100) <= self.sell_chance:  # 70% de chance de vender
+            if random.randint(1, 100) <= int(self.sell_chance):
                 self.price_history = []
                 return OrderSignal(
                     OrderSide.SELL, current_position.entry_order.quantity
