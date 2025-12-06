@@ -12,7 +12,6 @@ from trader.notification.notification_service import (
     NullNotificationService,
     TelegramNotificationService,
 )
-from trader.report import ReportTerminal
 
 app = typer.Typer()
 
@@ -99,17 +98,12 @@ def run(
     public_api, private_api = get_api_instances(api, api_key, api_secret, wallet_key)
     account = Account(private_api, currency)
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-    report_obj = ReportTerminal()
     notification_svc = _get_notification_svc(notification_service, notification_args)
 
     if websocket:
-        bot = WebsocketTradingBot(
-            public_api, strategy_obj, report_obj, account, notification_svc
-        )
+        bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
     else:
-        bot = TradingBot(
-            public_api, strategy_obj, report_obj, account, notification_svc
-        )
+        bot = TradingBot(public_api, strategy_obj, account, notification_svc)
     run_bot(bot, interval)
 
 
@@ -138,10 +132,9 @@ def backtest(
     public_api, private_api = get_api_instances(api)
     account = Account(private_api, currency)
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-    report_obj = ReportTerminal()
 
     bot = BacktestingBot(
-        public_api, strategy_obj, report_obj, account, start_datetime, end_datetime
+        public_api, strategy_obj, account, start_datetime, end_datetime
     )
     run_bot(bot, interval)
 
@@ -173,18 +166,12 @@ def fake(
     public_api, private_api = get_api_instances(api)
     account = Account(private_api, currency)
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
-    report_obj = ReportTerminal()
-
     notification_svc = _get_notification_svc(notification_service, notification_args)
 
     if websocket:
-        bot = WebsocketTradingBot(
-            public_api, strategy_obj, report_obj, account, notification_svc
-        )
+        bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
     else:
-        bot = TradingBot(
-            public_api, strategy_obj, report_obj, account, notification_svc
-        )
+        bot = TradingBot(public_api, strategy_obj, account, notification_svc)
     run_bot(bot, interval)
 
 
