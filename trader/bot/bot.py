@@ -23,16 +23,15 @@ class TradingBot(BaseBot):
         while self.is_running:
             try:
                 current_ticker = self.get_current_ticker()
-                total_pnl = self.account.get_total_realized_pnl()
-                log_ticker(self.symbol, current_ticker.last, total_pnl)
+                log_ticker(self.symbol, current_ticker.last)
 
                 order = self.process_market_data(current_ticker)
                 if order:
                     log_placed_order(order)
 
-                position = self.get_position()
+                position = self.account.get_position()
                 if position:
-                    log_position(position, self.ticker_history[-1].last)
+                    log_position(position, current_ticker.last)
 
                 time.sleep(interval)
 
@@ -44,22 +43,10 @@ class TradingBot(BaseBot):
                 traceback.print_exc()
                 time.sleep(interval)
 
-    def get_position(self):
-        position = self.account.get_position()
-        last_position = (
-            self.account.position_history[-1] if self.account.position_history else None
-        )
-        if last_position != self.last_position:
-            self.last_position = last_position
-            position = last_position
-        return position
 
-
-def log_ticker(symbol: str, price: Decimal, total_pnl: Decimal):
+def log_ticker(symbol: str, price: Decimal):
     fiat_symbol = symbol.split("-")[1]
-    console.print(
-        f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}. Realized PNL: {fiat_symbol} {total_pnl:.2f}"
-    )
+    console.print(f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}.")
 
 
 def log_placed_order(order: Order):

@@ -26,7 +26,6 @@ class BaseBot(ABC):
         self.account = account
         self.notification_service = notification_service
 
-        self.ticker_history: list[TickerData] = []
         self.last_position: Position | None = None
 
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -37,13 +36,10 @@ class BaseBot(ABC):
         pass
 
     def process_market_data(self, current_ticker: TickerData):
-        self.ticker_history.append(current_ticker)
-
         position_signal = self.strategy.on_market_refresh(
             current_ticker,
             None,
             self.account.get_position(),
-            self.account.position_history,
         )
         order = None
         if position_signal:

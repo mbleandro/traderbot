@@ -21,6 +21,7 @@ console = Console()
 class WebsocketTradingBot(BaseBot):
     def __init__(self, api, strategy, account, notification_service):
         super().__init__(api, strategy, account, notification_service)
+        self.total_pnl = Decimal("0.0")
         self.in_symbol, self.out_symbol = self.symbol.split("-")
         self.token = {
             "SOL": "So11111111111111111111111111111111111111112",
@@ -77,8 +78,7 @@ class WebsocketTradingBot(BaseBot):
                 while True:
                     try:
                         current_ticker = await self.get_current_ticker(ws)
-                        total_pnl = self.account.get_total_realized_pnl()
-                        log_ticker(self.symbol, current_ticker.last, total_pnl)
+                        log_ticker(self.symbol, current_ticker.last)
 
                         order = self.process_market_data(current_ticker)
                         if order:
@@ -89,9 +89,9 @@ class WebsocketTradingBot(BaseBot):
                                 f"{self.in_symbol} {order.price:.2f}"
                             )
 
-                        position = self.get_position()
+                        position = self.account.get_position()
                         if position:
-                            log_position(position, self.ticker_history[-1].last)
+                            log_position(position, current_ticker.last)
 
                     except websockets.exceptions.ConnectionClosedError:
                         self.logger.warning(
@@ -118,22 +118,10 @@ class WebsocketTradingBot(BaseBot):
                 self.logger.error(f"Erro ao conectar WebSocket: {str(ex)}")
                 await asyncio.sleep(2)  # Espera antes de tentar reconectar
 
-    def get_position(self):
-        position = self.account.get_position()
-        last_position = (
-            self.account.position_history[-1] if self.account.position_history else None
-        )
-        if last_position != self.last_position:
-            self.last_position = last_position
-            position = last_position
-        return position
 
-
-def log_ticker(symbol: str, price: Decimal, total_pnl: Decimal):
+def log_ticker(symbol: str, price: Decimal):
     fiat_symbol = symbol.split("-")[1]
-    console.print(
-        f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}. Realized PNL: {fiat_symbol} {total_pnl:.2f}"
-    )
+    console.print(f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}.")
 
 
 def log_placed_order(order: Order):

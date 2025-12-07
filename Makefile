@@ -30,7 +30,7 @@ clean: ## Remove arquivos temporários e cache
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
 runfake: ## Executa o bot principal com API fake e estratégia burra
-	$(UV) run $(PYTHON) main.py fake SOL-USDC random 10 'sell_chance=80 buy_chance=60' --notification-args=1
+	$(UV) run main.py fake SOL-USDC random 10 'sell_chance=4 buy_chance=8' --notification-args=null --websocket
 
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py run $(ARGS)

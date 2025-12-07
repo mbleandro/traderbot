@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from decimal import Decimal
-from typing import List
 
 from trader.models.order import Order
 
@@ -33,8 +32,6 @@ class Account:
             self.account_id = self.get_api_account_id("BRL")
 
         self.current_position: Position | None = None
-        self.position_history: List[Position] = []
-
         self.logger = logging.getLogger("Account")
 
     def get_api_account_id(self, currency: str) -> str:
@@ -111,7 +108,6 @@ class Account:
                     entry_order=order,
                     exit_order=None,
                 )
-                self.position_history.append(self.current_position)
             else:
                 self.current_position.exit_order = order
                 self.current_position = None
@@ -123,8 +119,7 @@ class Account:
             raise
 
     def get_total_realized_pnl(self) -> Decimal:
-        """Retorna o PnL total realizado"""
-        return Decimal(str(sum(pos.realized_pnl for pos in self.position_history)))
+        raise NotImplementedError("Método não implementado")
 
     def get_unrealized_pnl(self, current_price: Decimal) -> Decimal:
         """Retorna o PnL não realizado da posição atual"""

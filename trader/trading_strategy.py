@@ -18,7 +18,6 @@ class TradingStrategy(ABC):
         ticker: TickerData,
         balance: Decimal | None,
         current_position: Position | None,
-        position_history: list[Position],
     ) -> OrderSignal | None:
         pass
 
@@ -42,7 +41,6 @@ class RandomStrategy(TradingStrategy):
         ticker: TickerData,
         balance: Decimal,
         current_position: Position | None,
-        position_history: list[Position],
     ) -> OrderSignal | None:
         self.price_history.append(ticker.last)
         if not current_position:
@@ -174,7 +172,6 @@ class TargetValueStrategy(TradingStrategy):
         ticker: TickerData,
         balance: Decimal | None,
         current_position: Position | None,
-        position_history: list[Position],
     ) -> OrderSignal | None:
         current_price = ticker.buy
 
@@ -386,7 +383,6 @@ class DynamicTargetStrategy(TradingStrategy):
         ticker: TickerData,
         balance: Decimal,
         current_position: Position | None,
-        position_history: list[Position],
     ) -> OrderSignal | None:
         # Adiciona o ticker ao histórico
         self.ticker_history.append(ticker)

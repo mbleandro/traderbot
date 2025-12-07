@@ -18,8 +18,6 @@ app = typer.Typer()
 
 def get_api_instances(
     api_type: str,
-    api_key: str | None = None,
-    api_secret: str | None = None,
     wallet_key: str | None = None,
 ):
     """
@@ -65,10 +63,6 @@ def run(
     strategy: str = typer.Argument(..., help="The trading strategy to use"),
     interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
     api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
-    api_key: str | None = typer.Option(None, help="API key (para Mercado Bitcoin)"),
-    api_secret: str | None = typer.Option(
-        None, help="API secret (para Mercado Bitcoin)"
-    ),
     wallet_key: str | None = typer.Option(
         ..., help="Chave pública da wallet (para Jupiter)"
     ),
@@ -95,7 +89,7 @@ def run(
         if not wallet_key:
             raise ValueError("Para Jupiter, wallet_key é obrigatório")
 
-    public_api, private_api = get_api_instances(api, api_key, api_secret, wallet_key)
+    public_api, private_api = get_api_instances(api, wallet_key)
     account = Account(private_api, currency)
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
     notification_svc = _get_notification_svc(notification_service, notification_args)
@@ -114,13 +108,13 @@ def fake(
     interval: int,
     api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
     websocket: bool = typer.Option(
-        False, help="Use WebSocket para atualização de preços"
+        True, help="Use WebSocket para atualização de preços"
     ),
     notification_service: str = typer.Option(
         "null", help="Serviço de notificação: 'telegram' ou 'null'"
     ),
     notification_args: str | None = typer.Option(
-        ..., help="Argumentos do serviço de notificação"
+        None, help="Argumentos do serviço de notificação"
     ),
     strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
