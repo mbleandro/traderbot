@@ -1,3 +1,5 @@
+from typing import Literal
+
 import typer
 
 from trader import get_strategy_cls
@@ -12,34 +14,32 @@ from trader.providers import (
     JupiterPrivateAPI,
     JupiterPublicAPIAdapter,
 )
+from trader.providers.jupiter.jupiter_adapter import DryJupiterPrivateAPI
 
 app = typer.Typer()
 
 
 def get_api_instances(
-    api_type: str,
     wallet_key: str | None = None,
+    run_mode: Literal["real", "fake", "dry"] = "real",
 ):
     """
-    Retorna instâncias das APIs pública e privada baseado no tipo.
+    Retorna instância das API privada baseado no tipo.
 
     Args:
-        api_type: 'jupiter' ou 'jupiter'
-        wallet_key: Chave pública da wallet (para Jupiter)
+        wallet_key: Chave pública da wallet
 
     Returns:
-        Tuple (public_api, private_api)
+        private_api
     """
-    if api_type == "jupiter":
-        public_api = JupiterPublicAPIAdapter(use_pro=False)
-        if wallet_key:
-            private_api = JupiterPrivateAPI(wallet_public_key=wallet_key)
-        else:
-            private_api = FakeJupiterPrivateAPI()
-        return public_api, private_api
+    if run_mode == "fake":
+        return FakeJupiterPrivateAPI()
 
-    else:
-        raise ValueError(f"API type '{api_type}' não suportado. Use 'jupiter'")
+    assert wallet_key is not None, "wallet_key é obrigatório para modos real e dry"
+    if run_mode == "dry":
+        return DryJupiterPrivateAPI(wallet_public_key=wallet_key)
+    if run_mode == "real":
+        return JupiterPrivateAPI(wallet_public_key=wallet_key)
 
 
 def _get_notification_svc(
@@ -69,6 +69,9 @@ def run(
     websocket: bool = typer.Option(
         False, help="Use WebSocket para atualização de preços"
     ),
+    dry: bool = typer.Option(
+        False, help="Se True, executa em modo dry-run (sem realizar a transacão final)"
+    ),
     notification_service: str = typer.Option(
         "null", help="Serviço de notificação: 'telegram' ou 'null'"
     ),
@@ -85,11 +88,15 @@ def run(
         uv run python main.py run SOL-USDC dynamic_target 60 --api jupiter --wallet-key=WALLET_PUBLIC_KEY 'ema_period=20'
     """
     # Validação de credenciais
+    if not api == "jupiter":
+        raise ValueError(f"API type '{api}' não suportado. Use 'jupiter'")
+
     if api == "jupiter":
         if not wallet_key:
             raise ValueError("Para Jupiter, wallet_key é obrigatório")
 
-    public_api, private_api = get_api_instances(api, wallet_key)
+    public_api = JupiterPublicAPIAdapter(use_pro=False)
+    private_api = get_api_instances(wallet_key, run_mode="real" if not dry else "dry")
     account = Account(private_api, currency)
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
     notification_svc = _get_notification_svc(notification_service, notification_args)
@@ -125,7 +132,8 @@ def fake(
         # Jupiter
         uv run python main.py fake SOL-USDC dynamic_target 60 --api jupiter 'ema_period=20'
     """
-    public_api, private_api = get_api_instances(api)
+    public_api = JupiterPublicAPIAdapter(use_pro=False)
+    private_api = get_api_instances(None, "fake")
     account = Account(private_api, currency)
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
     notification_svc = _get_notification_svc(notification_service, notification_args)

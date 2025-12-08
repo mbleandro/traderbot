@@ -17,7 +17,7 @@ from solana.rpc.types import TokenAccountOpts
 from solders.keypair import Keypair
 from solders.message import MessageV0, to_bytes_versioned
 from solders.pubkey import Pubkey
-from solders.solders import LiteSVM, SendTransactionResp
+from solders.solders import LiteSVM, SendTransactionResp, Signature
 from solders.transaction import VersionedTransaction
 from solders.transaction_status import TransactionConfirmationStatus
 from spl.token.instructions import (
@@ -440,6 +440,14 @@ class JupiterPrivateAPI(PrivateAPIBase):
         print(f"✓ Transação enviada: {signature}")
         return resp
 
+    def _send_transaction_and_wait_for_confirmation(
+        self, new_tx: VersionedTransaction
+    ) -> SendTransactionResp:
+        resp = self._send_signed_transaction(new_tx)
+        signature = resp.value
+        self._wait_for_confirmation(signature)
+        return resp
+
     def _do_swap(
         self,
         mint_in: str,
@@ -450,18 +458,26 @@ class JupiterPrivateAPI(PrivateAPIBase):
         quote = self._get_quote_with_route(mint_in, mint_out, amount_in, slippage_bps)
         tx = self._get_swap_transaction(quote)
         new_tx = self._get_signed_transaction(tx)
-        resp = self._send_signed_transaction(new_tx)
-
-        signature = resp.value
-        self._wait_for_confirmation(signature)
+        resp = self._send_transaction_and_wait_for_confirmation(new_tx)
         return resp.to_json()
-        # return "FAKE_SIGNATURE"
+
+
+class DryJupiterPrivateAPI(JupiterPrivateAPI):
+    """ "
+    Versão dry-run da API privada Jupiter para testes.
+    Não muda nada na execucão real, EXCETO a funcao de enviar transação.
+    """
+
+    def _send_transaction_and_wait_for_confirmation(
+        self, new_tx: VersionedTransaction
+    ) -> SendTransactionResp:
+        return SendTransactionResp(value=Signature.new_unique())
 
 
 class FakeJupiterPrivateAPI(JupiterPrivateAPI):
     """
-    Versão fake da API privada Jupiter para testes e backtesting.
-    Simula operações sem executar transações reais.
+    Versão fake da API privada Jupiter para testes.
+    Cria uma conta fake, com saldos e ordens simuladas usando LiteSVM.
     """
 
     def __init__(

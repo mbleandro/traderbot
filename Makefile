@@ -34,7 +34,7 @@ runfake: ## Executa o bot principal com API fake e estratégia burra
 	$(UV) run main.py fake SOL-USDC random 10 'sell_chance=4 buy_chance=8' --notification-args=null --websocket
 
 rundry: ## Executa o bot principal com dados reais, mas com a estrategia com parametros pra não comprar
-	$(UV) run --env-file .env main.py run SOL-USDC random 10 'sell_chance=0 buy_chance=0' --websocket --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
+	$(UV) run --env-file .env main.py run SOL-USDC random 10 'sell_chance=20 buy_chance=40' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
 
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py run $(ARGS)
