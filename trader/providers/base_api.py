@@ -67,12 +67,9 @@ class PrivateAPIBase(ABC):
         ...
 
     @abstractmethod
-    def get_account_balance(self, account_id: str) -> List[AccountBalanceData]:
+    def get_account_balance(self) -> List[AccountBalanceData]:
         """
         Obtém saldo de uma conta específica.
-
-        Args:
-            account_id: ID da conta
 
         Returns:
             List[AccountBalanceData]: Lista de saldos por moeda
@@ -82,7 +79,6 @@ class PrivateAPIBase(ABC):
     @abstractmethod
     def place_order(
         self,
-        account_id: str,
         symbol: str,
         side: str,
         type_order: str,
@@ -93,7 +89,6 @@ class PrivateAPIBase(ABC):
         Executa uma ordem de compra ou venda.
 
         Args:
-            account_id: ID da conta
             symbol: Símbolo do par (ex: 'BTC-BRL')
             side: Lado da ordem ('buy' ou 'sell')
             type_order: Tipo da ordem ('market', 'limit', etc)

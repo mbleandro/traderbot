@@ -227,9 +227,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
         assert private_key, "Chave privada não definida"
         self.keypair = Keypair.from_base58_string(private_key)
 
-        # Simula uma conta única (wallets Solana não têm múltiplas contas)
-        self._account_id = "solana_wallet"
-
     def get_accounts(self) -> List[AccountData]:
         """
         Retorna uma "conta" simulada representando a wallet Solana.
@@ -254,15 +251,12 @@ class JupiterPrivateAPI(PrivateAPIBase):
                 ]
         return []
 
-    def get_account_balance(self, account_id: str) -> List[AccountBalanceData]:
+    def get_account_balance(self) -> List[AccountBalanceData]:
         """
         Obtém saldo da wallet Solana.
 
         NOTA: Requer implementação de RPC calls para Solana.
         Por enquanto, retorna lista vazia.
-
-        Args:
-            account_id: ID da conta (ignorado, usa wallet_public_key)
 
         Returns:
             List[AccountBalanceData]: Lista de saldos
@@ -346,7 +340,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
         4. Enviar para blockchain
 
         Args:
-            account_id: ID da conta (ignorado)
             symbol: Símbolo do par (ex: 'SOL-USDC')
             side: 'buy' ou 'sell'
             type_order: Tipo da ordem (apenas 'market' suportado)
@@ -544,7 +537,6 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
         self.wallet_public_key = str(self.wallet)
         self.client = LiteSVM()
 
-        self._account_id = "solana_wallet"
         self._balances: Dict[str, Decimal] = {
             "SOL": Decimal("10.0"),
             "USDC": Decimal("100.0"),
@@ -562,7 +554,7 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
             )
         ]
 
-    def get_account_balance(self, account_id: str) -> List[AccountBalanceData]:
+    def get_account_balance(self) -> List[AccountBalanceData]:
         """Retorna saldos simulados"""
         balances = []
         for symbol, amount in self._balances.items():

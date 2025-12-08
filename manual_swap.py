@@ -142,9 +142,6 @@ def get_account_balance() -> list[AccountBalanceData]:
     NOTA: Requer implementação de RPC calls para Solana.
     Por enquanto, retorna lista vazia.
 
-    Args:
-        account_id: ID da conta (ignorado, usa wallet_public_key)
-
     Returns:
         List[AccountBalanceData]: Lista de saldos
     """

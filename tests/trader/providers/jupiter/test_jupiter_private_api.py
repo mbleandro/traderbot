@@ -89,7 +89,6 @@ class TestJupiterPrivateAPI:
         )
         assert api.wallet_public_key == "E6W4RLUxZLQN5mjVfTAv7hTrdLR5Y6nrNvFiW8p1Q1m"
         assert api.rpc_url == "https://mock.com"
-        assert api._account_id == "solana_wallet"
 
         assert isinstance(api.wallet, Pubkey)
         assert isinstance(api.client, SolanaClient)
@@ -102,7 +101,7 @@ class TestJupiterPrivateAPI:
             wallet_public_key="E6W4RLUxZLQN5mjVfTAv7hTrdLR5Y6nrNvFiW8p1Q1m"
         )
 
-        balance = api.get_account_balance(api.wallet_public_key)
+        balance = api.get_account_balance()
         assert balance == [
             AccountBalanceData(
                 available=Decimal("123.456789"),

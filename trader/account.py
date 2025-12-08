@@ -16,34 +16,12 @@ class Account:
         self.symbol = symbol
         self.coin_symbol, self.fiat_symbol = symbol.split("-")
 
-        # Extrai a moeda base do símbolo (ex: BTC-BRL -> BRL, SOL-USDC -> SOL)
-        # Para Jupiter, a moeda base é a primeira (SOL em SOL-USDC)
-        # Para Mercado Bitcoin, a moeda base é a segunda (BRL em BTC-BRL)
-        parts = symbol.split("-")
-        if len(parts) == 2:
-            # Tenta primeiro com a segunda parte (Mercado Bitcoin)
-            try:
-                self.account_id = self.get_api_account_id(parts[1])
-            except Exception:
-                # Se falhar, tenta com a primeira parte (Jupiter/Solana)
-                self.account_id = self.get_api_account_id(parts[0])
-        else:
-            # Fallback para BRL
-            self.account_id = self.get_api_account_id("BRL")
-
         self.current_position: Position | None = None
         self.logger = logging.getLogger("Account")
 
-    def get_api_account_id(self, currency: str) -> str:
-        accounts = self.api.get_accounts()
-        for account in accounts:
-            if account.currency == currency:
-                return account.id
-        raise Exception(f"Conta para {currency} não encontrada")
-
     def get_balance(self, currency: str) -> Decimal:
         """Obtém saldo de uma moeda específica"""
-        balances = self.api.get_account_balance(self.account_id)
+        balances = self.api.get_account_balance()
         for balance in balances:
             if balance.symbol == currency:
                 return Decimal(str(balance.available))
