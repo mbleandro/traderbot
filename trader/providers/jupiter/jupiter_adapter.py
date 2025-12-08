@@ -299,46 +299,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
         return balances
 
-    def place_order(
-        self,
-        symbol: str,
-        side: str,
-        type_order: str,
-        quantity: str,
-        price: Decimal,
-    ) -> str:
-        """
-        Executa um swap na Jupiter.
-
-        1. Obter quote
-        2. Obter transação serializada
-        3. Assinar com private key
-        4. Enviar para blockchain
-
-        Args:
-            symbol: Símbolo do par (ex: 'SOL-USDC')
-            side: 'buy' ou 'sell'
-            type_order: Tipo da ordem (apenas 'market' suportado)
-            quantity: Quantidade a negociar
-
-        Returns:
-            str: Transaction signature (simulado)
-        """
-
-        if side == "buy":
-            return self.buy(
-                symbol=symbol,
-                type_order=type_order,
-                quantity=quantity,
-                price=price,
-            )
-        else:
-            return self.sell(
-                symbol=symbol,
-                type_order=type_order,
-                quantity=quantity,
-            )
-
     def buy(
         self,
         symbol: str,
@@ -495,7 +455,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
         signature = resp.value
         self._wait_for_confirmation(signature)
         return resp.to_json()
-        return "FAKE_SIGNATURE"
+        # return "FAKE_SIGNATURE"
 
 
 class FakeJupiterPrivateAPI(JupiterPrivateAPI):
