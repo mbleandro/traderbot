@@ -63,6 +63,7 @@ class Account:
             return False
         # Verifica se tem saldo suficiente em BRL
         brl_balance = self.get_balance(self.fiat_symbol)
+        print(self.fiat_symbol, brl_balance)
         return brl_balance > Decimal("0.1")  # Mínimo para operar
 
     def can_sell(self) -> bool:
@@ -79,16 +80,17 @@ class Account:
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
     def place_order(self, price: Decimal, side: OrderSide, quantity: Decimal) -> Order:
-        if side == OrderSide.BUY and not self.can_buy():
-            raise ValueError("Não é possível executar compra no momento")
-        if side == OrderSide.SELL and not self.can_sell():
-            raise ValueError("Não é possível executar compra no momento")
+        if side == OrderSide.BUY:
+            return self.buy(price, quantity)
+        if side == OrderSide.SELL:
+            return self.sell(price, quantity)
 
+    def buy(self, price: Decimal, quantity: Decimal) -> Order:
+        if not self.can_buy():
+            raise ValueError("Não é possível executar compra no momento")
         try:
-            order_id = self.api.place_order(
-                account_id=self.account_id,
+            order_id = self.api.buy(
                 symbol=self.symbol,
-                side=str(side),
                 type_order="market",
                 quantity=str(quantity),
                 price=price,
@@ -98,19 +100,42 @@ class Account:
                 symbol=self.symbol,
                 quantity=quantity * Decimal("0.997"),
                 price=price,
-                side=side,
+                side=OrderSide.BUY,
                 timestamp=datetime.now(),
             )
-            if not self.current_position:
-                # Criar nova posição
-                self.current_position = Position(
-                    type=PositionType.LONG,
-                    entry_order=order,
-                    exit_order=None,
-                )
-            else:
-                self.current_position.exit_order = order
-                self.current_position = None
+            # Criar nova posição
+            self.current_position = Position(
+                type=PositionType.LONG,
+                entry_order=order,
+                exit_order=None,
+            )
+            return order
+
+        except Exception as ex:
+            self.logger.error(f"Erro ao executar ordem: {str(ex)}")
+            raise
+
+    def sell(self, price: Decimal, quantity: Decimal) -> Order:
+        if not self.can_sell():
+            raise ValueError("Não é possível executar compra no momento")
+
+        try:
+            order_id = self.api.sell(
+                symbol=self.symbol,
+                type_order="market",
+                quantity=str(quantity),
+            )
+            order = Order(
+                order_id=order_id,
+                symbol=self.symbol,
+                quantity=quantity * Decimal("0.997"),
+                price=price,
+                side=OrderSide.SELL,
+                timestamp=datetime.now(),
+            )
+            assert self.current_position
+            self.current_position.exit_order = order
+            self.current_position = None
 
             return order
 

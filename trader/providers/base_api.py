@@ -6,7 +6,7 @@ Define contratos comuns que devem ser implementados por todas as APIs (Mercado B
 from abc import ABC, abstractmethod
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List
+from typing import List
 
 from ..models.account_data import AccountBalanceData, AccountData
 from ..models.public_data import Candles, TickerData
@@ -105,17 +105,18 @@ class PrivateAPIBase(ABC):
         ...
 
     @abstractmethod
-    def get_orders(
-        self, symbol: str | None = None, status: str | None = None
-    ) -> Dict[str, Any]:
-        """
-        Lista ordens do usuário.
+    def buy(
+        self,
+        symbol: str,
+        type_order: str,
+        quantity: str,
+        price: Decimal,
+    ) -> str: ...
 
-        Args:
-            symbol: Filtrar por símbolo (opcional)
-            status: Filtrar por status (opcional)
-
-        Returns:
-            Dict contendo as ordens
-        """
-        ...
+    @abstractmethod
+    def sell(
+        self,
+        symbol: str,
+        type_order: str,
+        quantity: str,
+    ) -> str: ...

@@ -25,6 +25,8 @@ from spl.token.instructions import (
     TOKEN_PROGRAM_ID,  # type: ignore
 )
 
+from trader.models.order import OrderSide
+
 from ...models.account_data import AccountBalanceData, AccountData
 from ...models.public_data import Candles, TickerData
 from ..base_api import PrivateAPIBase, PublicAPIBase
@@ -329,7 +331,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
     def place_order(
         self,
-        account_id: str,
         symbol: str,
         side: str,
         type_order: str,
@@ -354,16 +355,47 @@ class JupiterPrivateAPI(PrivateAPIBase):
         Returns:
             str: Transaction signature (simulado)
         """
+
+        if side == "buy":
+            return self.buy(
+                symbol=symbol,
+                type_order=type_order,
+                quantity=quantity,
+                price=price,
+            )
+        else:
+            return self.sell(
+                symbol=symbol,
+                type_order=type_order,
+                quantity=quantity,
+            )
+
+    def buy(
+        self,
+        symbol: str,
+        type_order: str,
+        quantity: str,
+        price: Decimal,
+    ) -> str:
         mint_in = SOLANA_TOKENS[symbol.split("-")[0]]
         mint_out = SOLANA_TOKENS[symbol.split("-")[1]]
 
-        if side == "buy":
-            mint_in, mint_out = mint_out, mint_in
-            decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[1]]
-            amount_in = int(Decimal(quantity) * price * (10**decimals))
-        else:
-            decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[0]]
-            amount_in = int(Decimal(quantity) * (10**decimals))
+        mint_in, mint_out = mint_out, mint_in
+        decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[1]]
+        amount_in = int(Decimal(quantity) * price * (10**decimals))
+        return self._do_swap_with_retry(mint_in, mint_out, amount_in)
+
+    def sell(
+        self,
+        symbol: str,
+        type_order: str,
+        quantity: str,
+    ) -> str:
+        mint_in = SOLANA_TOKENS[symbol.split("-")[0]]
+        mint_out = SOLANA_TOKENS[symbol.split("-")[1]]
+
+        decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[0]]
+        amount_in = int(Decimal(quantity) * (10**decimals))
         return self._do_swap_with_retry(mint_in, mint_out, amount_in)
 
     def _do_swap_with_retry(self, mint_in: str, mint_out: str, amount_in: int):
@@ -496,29 +528,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
         return resp.to_json()
         # return "FAKE_SIGNATURE"
 
-    def get_orders(
-        self, symbol: str | None = None, status: str | None = None
-    ) -> Dict[str, Any]:
-        """
-        Lista ordens.
-
-        NOTA: Jupiter/Solana não mantém histórico centralizado de ordens.
-        Para histórico, consulte a blockchain diretamente ou use um indexador.
-
-        Args:
-            symbol: Filtrar por símbolo (ignorado)
-            status: Filtrar por status (ignorado)
-
-        Returns:
-            Dict vazio
-        """
-        self.logger.warning(
-            "get_orders não aplicável para Jupiter. "
-            "Consulte a blockchain Solana diretamente para histórico de transações."
-        )
-
-        return {"orders": []}
-
 
 class FakeJupiterPrivateAPI(JupiterPrivateAPI):
     """
@@ -567,28 +576,37 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
             )
         return balances
 
-    def place_order(
+    def buy(
         self,
-        account_id: str,
         symbol: str,
-        side: str,
         type_order: str,
         quantity: str,
         price: Decimal,
     ) -> str:
-        """Simula execução de ordem"""
         import uuid
 
         order_id = str(uuid.uuid4())
         self.logger.info(
-            f"[FAKE] Order placed: {side} {quantity} {symbol} - ID: {order_id}"
+            f"[FAKE] Order placed: {OrderSide.BUY} {quantity} {symbol} - ID: {order_id}"
         )
 
         # TODO: utilizar LiteSVM para simular mudanças reais
 
         return order_id
 
-    def get_orders(
-        self, symbol: str | None = None, status: str | None = None
-    ) -> Dict[str, Any]:
-        return {"orders": []}
+    def sell(
+        self,
+        symbol: str,
+        type_order: str,
+        quantity: str,
+    ) -> str:
+        import uuid
+
+        order_id = str(uuid.uuid4())
+        self.logger.info(
+            f"[FAKE] Order placed: {OrderSide.SELL} {quantity} {symbol} - ID: {order_id}"
+        )
+
+        # TODO: utilizar LiteSVM para simular mudanças reais
+
+        return order_id
