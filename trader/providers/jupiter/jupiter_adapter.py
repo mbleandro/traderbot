@@ -495,7 +495,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
         signature = resp.value
         self._wait_for_confirmation(signature)
         return resp.to_json()
-        # return "FAKE_SIGNATURE"
+        return "FAKE_SIGNATURE"
 
 
 class FakeJupiterPrivateAPI(JupiterPrivateAPI):

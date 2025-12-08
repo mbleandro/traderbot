@@ -67,29 +67,6 @@ class PrivateAPIBase(ABC):
         ...
 
     @abstractmethod
-    def place_order(
-        self,
-        symbol: str,
-        side: str,
-        type_order: str,
-        quantity: str,
-        price: Decimal,
-    ) -> str:
-        """
-        Executa uma ordem de compra ou venda.
-
-        Args:
-            symbol: Símbolo do par (ex: 'BTC-BRL')
-            side: Lado da ordem ('buy' ou 'sell')
-            type_order: Tipo da ordem ('market', 'limit', etc)
-            quantity: Quantidade a negociar
-
-        Returns:
-            str: ID da ordem executada
-        """
-        ...
-
-    @abstractmethod
     def buy(
         self,
         symbol: str,
