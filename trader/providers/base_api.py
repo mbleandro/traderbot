@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List
 
-from ..models.account_data import AccountBalanceData, AccountData
+from ..models.account_data import AccountBalanceData
 from ..models.public_data import Candles, TickerData
 
 
@@ -55,16 +55,6 @@ class PrivateAPIBase(ABC):
     Interface base para APIs privadas (com autenticação).
     Todas as exchanges/DEXes devem implementar esta interface.
     """
-
-    @abstractmethod
-    def get_accounts(self) -> List[AccountData]:
-        """
-        Obtém lista de contas do usuário.
-
-        Returns:
-            List[AccountData]: Lista de contas
-        """
-        ...
 
     @abstractmethod
     def get_account_balance(self) -> List[AccountBalanceData]:

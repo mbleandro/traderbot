@@ -27,7 +27,7 @@ from spl.token.instructions import (
 
 from trader.models.order import OrderSide
 
-from ...models.account_data import AccountBalanceData, AccountData
+from ...models.account_data import AccountBalanceData
 from ...models.public_data import Candles, TickerData
 from ..base_api import PrivateAPIBase, PublicAPIBase
 from .jupiter_public_api import (
@@ -226,30 +226,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
         private_key = os.getenv("SOLANA_PRIVATE_KEY")
         assert private_key, "Chave privada não definida"
         self.keypair = Keypair.from_base58_string(private_key)
-
-    def get_accounts(self) -> List[AccountData]:
-        """
-        Retorna uma "conta" simulada representando a wallet Solana.
-
-        Returns:
-            List[AccountData]: Lista com uma conta simulada
-        """
-        resp = self.client.get_account_info(self.wallet)
-        if resp.value:
-            lamports = resp.value.lamports
-            sol = lamports / 1_000_000
-
-            if sol > 0:
-                return [
-                    AccountData(
-                        id=self.wallet_public_key,
-                        currency="USDC",
-                        currencySign="◎",
-                        name="Solana Wallet",
-                        type="wallet",
-                    )
-                ]
-        return []
 
     def get_account_balance(self) -> List[AccountBalanceData]:
         """
@@ -542,17 +518,6 @@ class FakeJupiterPrivateAPI(JupiterPrivateAPI):
             "USDC": Decimal("100.0"),
             "BONK": Decimal("1000"),
         }
-
-    def get_accounts(self) -> List[AccountData]:
-        return [
-            AccountData(
-                id=self.wallet_public_key,
-                currency="USDC",
-                currencySign="◎",
-                name="Solana Wallet",
-                type="wallet",
-            )
-        ]
 
     def get_account_balance(self) -> List[AccountBalanceData]:
         """Retorna saldos simulados"""
