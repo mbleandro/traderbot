@@ -64,6 +64,8 @@ class Account:
         if side == OrderSide.SELL:
             return self.sell(price, quantity)
 
+        raise ValueError("Invalid Order Side.")
+
     def buy(self, price: Decimal, quantity: Decimal) -> Order:
         if not self.can_buy():
             raise ValueError("Não é possível executar compra no momento")

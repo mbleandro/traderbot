@@ -18,7 +18,8 @@ class TradingBot(BaseBot):
         ticker = self.api.get_ticker(self.symbol)
         return ticker
 
-    def run(self, interval: int = 60):
+    def run(self, **kwargs):
+        interval = int(kwargs.get("interval", 60))
         self.is_running = True
         while self.is_running:
             try:

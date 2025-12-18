@@ -414,6 +414,7 @@ class DynamicTargetStrategy(TradingStrategy):
         if not current_position:
             # Compra quando o preço cai abaixo do target dinâmico
             if current_price <= target_buy:
+                assert balance
                 return OrderSignal(
                     OrderSide.BUY,
                     self.calculate_quantity(balance, current_price),

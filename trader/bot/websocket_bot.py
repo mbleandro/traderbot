@@ -55,7 +55,7 @@ class WebsocketTradingBot(BaseBot):
             vol=Decimal("0"),  # Não disponível via quote API
         )
 
-    def run(self, interval: int = 60):
+    def run(self, **kwargs):
         self.is_running = True
         self.strategy.setup(self.get_candles())
         asyncio.run(self._run())
