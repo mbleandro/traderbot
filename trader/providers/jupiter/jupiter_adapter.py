@@ -371,36 +371,55 @@ class JupiterPrivateAPI(PrivateAPIBase):
         slippage_bps: int = 50,
     ):
         print("→ Criando rota na Jupiter...")
-        quote = requests.get(
-            "https://lite-api.jup.ag/swap/v1/quote",
-            params={
-                "inputMint": mint_in,
-                "outputMint": mint_out,
-                "amount": amount_in,
-                "slippageBps": slippage_bps,
-            },
-        ).json()
+        response = None
+        try:
+            response = requests.get(
+                "https://lite-api.jup.ag/swap/v1/quote",
+                params={
+                    "inputMint": mint_in,
+                    "outputMint": mint_out,
+                    "amount": amount_in,
+                    "slippageBps": slippage_bps,
+                },
+            )
+            response.raise_for_status()
+            quote = response.json()
 
-        if not quote.get("routePlan"):
-            raise Exception("Nenhuma rota encontrada!")
+            if not quote.get("routePlan"):
+                raise Exception("Nenhuma rota encontrada!")
 
-        print("✓ Rota encontrada.")
-        return quote
+            print("✓ Rota encontrada.")
+            return quote
+        except Exception as ex:
+            if response is not None:
+                ex.add_note(f"Status Code: {response.status_code}")
+                ex.add_note(f"Response: {response.text}")
+            raise ex
 
     def _get_swap_transaction(self, quote: Dict[str, Any]) -> VersionedTransaction:
         print("→ Gerando transação de swap...")
-        swap_tx = requests.post(
-            "https://lite-api.jup.ag/swap/v1/swap",
-            json={
-                "quoteResponse": quote,
-                "userPublicKey": self.wallet_public_key,
-            },
-        ).json()
-        raw_tx = base64.b64decode(swap_tx["swapTransaction"])
+        response = None
+        try:
+            response = requests.post(
+                "https://lite-api.jup.ag/swap/v1/swap",
+                json={
+                    "quoteResponse": quote,
+                    "userPublicKey": self.wallet_public_key,
+                },
+            )
+            response.raise_for_status()
+            swap_tx = response.json()
+            raw_tx = base64.b64decode(swap_tx["swapTransaction"])
 
-        # ---------- desserializar ----------
-        tx = VersionedTransaction.from_bytes(raw_tx)
-        return tx
+            # ---------- desserializar ----------
+            tx = VersionedTransaction.from_bytes(raw_tx)
+            return tx
+
+        except Exception as ex:
+            if response is not None:
+                ex.add_note(f"Status Code: {response.status_code}")
+                ex.add_note(f"Response: {response.text}")
+            raise ex
 
     def _get_signed_transaction(self, tx: VersionedTransaction) -> VersionedTransaction:
         # ---------- assinar ----------

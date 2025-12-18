@@ -18,6 +18,7 @@ class Account:
 
         self.current_position: Position | None = None
         self.logger = logging.getLogger("Account")
+        self.total_pnl = Decimal("0.0")
 
     def get_balance(self, currency: str) -> Decimal:
         """Obtém saldo de uma moeda específica"""
@@ -95,7 +96,7 @@ class Account:
 
     def sell(self, price: Decimal, quantity: Decimal) -> Order:
         if not self.can_sell():
-            raise ValueError("Não é possível executar compra no momento")
+            raise ValueError("Não é possível executar venda no momento")
 
         try:
             order_id = self.api.sell(
@@ -113,6 +114,7 @@ class Account:
             )
             assert self.current_position
             self.current_position.exit_order = order
+            self.total_pnl += self.current_position.realized_pnl
             self.current_position = None
 
             return order
@@ -122,7 +124,7 @@ class Account:
             raise
 
     def get_total_realized_pnl(self) -> Decimal:
-        raise NotImplementedError("Método não implementado")
+        return self.total_pnl
 
     def get_unrealized_pnl(self, current_price: Decimal) -> Decimal:
         """Retorna o PnL não realizado da posição atual"""

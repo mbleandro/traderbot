@@ -32,6 +32,20 @@ class Position:
             ) * self.entry_order.quantity
         return Decimal("0.0")
 
+    def unrealized_pnl_percent(self, current_price: Decimal) -> Decimal:
+        """Calcula o PnL não realizado em percentual"""
+        pnl_value = self.unrealized_pnl(current_price)
+        return (
+            pnl_value / (self.entry_order.price * self.entry_order.quantity)
+        ) * Decimal("100.0")
+
+    @property
+    def realized_pnl_percent(self) -> Decimal:
+        pnl_value = self.realized_pnl
+        return (
+            pnl_value / (self.entry_order.price * self.entry_order.quantity)
+        ) * Decimal("100.0")
+
     def __eq__(self, value):
         return (
             value

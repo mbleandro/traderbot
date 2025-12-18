@@ -31,10 +31,17 @@ clean: ## Remove arquivos temporários e cache
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
 runfake: ## Executa o bot principal com API fake e estratégia burra
-	$(UV) run main.py fake SOL-USDC random 10 'sell_chance=4 buy_chance=8' --notification-args=null --websocket
+	$(UV) run main.py fake SOL-USDC random 10 'sell_chance=20 buy_chance=40' --notification-args=null --websocket
 
 rundry: ## Executa o bot principal com dados reais, mas com a estrategia com parametros pra não comprar
 	$(UV) run --env-file .env main.py run SOL-USDC random 10 'sell_chance=20 buy_chance=40' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
+
+rundrycomposer_sol:
+	$(UV) run --env-file .env main.py run SOL-USDC composer 10 'buy_mode=all sell_mode=any' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
+
+rundrycomposer_bonk:
+	$(UV) run --env-file .env main.py run BONK-USDC composer 10 'buy_mode=all sell_mode=all' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
+
 
 run: ## Executa o bot principal
 	$(UV) run $(PYTHON) main.py run $(ARGS)

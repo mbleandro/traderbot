@@ -1,3 +1,5 @@
+from tkinter import W
+from datetime import datetime, timedelta
 import random
 from abc import ABC, abstractmethod
 from decimal import Decimal
@@ -25,6 +27,10 @@ class TradingStrategy(ABC):
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
         pass
 
+    def setup(self, ticker_history: list[TickerData]):
+        """Configura a estratégia, se necessário"""
+        pass
+
 
 class RandomStrategy(TradingStrategy):
     def __init__(self, sell_chance: int, buy_chance: int):
@@ -39,7 +45,7 @@ class RandomStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal,
+        balance: Decimal | None,
         current_position: Position | None,
     ) -> OrderSignal | None:
         self.price_history.append(ticker.last)
@@ -381,7 +387,7 @@ class DynamicTargetStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal,
+        balance: Decimal | None,
         current_position: Position | None,
     ) -> OrderSignal | None:
         # Adiciona o ticker ao histórico
@@ -426,5 +432,279 @@ class DynamicTargetStrategy(TradingStrategy):
                 return OrderSignal(
                     OrderSide.SELL, current_position.entry_order.quantity
                 )
+
+        return None
+
+
+class WeightedMovingAverageStrategy(TradingStrategy):
+    """
+    Estratégia baseada em médias móveis ponderadas.
+    Apenas compra quando a média curta está abaixo da média longa.
+    A venda acontece seguindo a estratégia de target value.
+    """
+
+    def __init__(
+        self,
+        short_window: int = 15,
+        long_window: int = 200,
+        buy_when_short_below: bool = True,
+        period: int = 60,
+        shift_past: int = 0,
+    ):
+        self.short_window = short_window
+        self.long_window = long_window
+        self.buy_when_short_below = buy_when_short_below
+        self.period = period
+        self.shift_past = shift_past
+
+        self.price_history: list[Decimal] = []
+        self.last_price_time = datetime.min
+
+    def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
+        quantity = (balance * Decimal("0.8")) / price
+        return quantity
+
+    def weighted_moving_average(self, prices: list[Decimal], window: int) -> Decimal:
+        if self.shift_past > 0:
+            prices = prices[: -self.shift_past]
+
+        weights = list(range(1, window + 1))
+        weighted_prices = [
+            price * Decimal(weight) for price, weight in zip(prices[-window:], weights)
+        ]
+        return sum(weighted_prices) / Decimal(sum(weights))
+
+    def set_parameters(self, price: Decimal, timestamp: datetime | None = None):
+        history_limit = self.long_window + self.shift_past
+        _now: datetime = datetime.now() if timestamp is None else timestamp
+        if self.last_price_time + timedelta(seconds=self.period) <= _now:
+            self.price_history.append(price)
+            self.last_price_time = _now
+            if len(self.price_history) > history_limit:
+                self.price_history.pop(0)
+
+        if self.last_price_time + timedelta(seconds=self.period) > _now:
+            # substitui o ultimo preco da lista enquanto o periodo de atualizacao nao chega
+            # pra evitar que a media fique defasada
+            self.price_history[-1] = price
+
+    def setup(self, ticker_history):
+        for ticker in ticker_history:
+            self.set_parameters(ticker.last, ticker.timestamp)
+        return super().setup(ticker_history)
+
+    def on_market_refresh(
+        self,
+        ticker: TickerData,
+        balance: Decimal | None,
+        current_position: Position | None,
+    ) -> OrderSignal | None:
+        self.set_parameters(ticker.last)
+
+        if len(self.price_history) < self.long_window:
+            return None
+
+        short_wma = self.weighted_moving_average(self.price_history, self.short_window)
+        long_wma = self.weighted_moving_average(self.price_history, self.long_window)
+        print(
+            f"{self.__class__.__name__}: Short: {short_wma:.9f}; Long: {long_wma:.9f} {self.buy_when_short_below=} {self.shift_past=}"
+            f" can_buy={not current_position is not None and ((self.buy_when_short_below and short_wma < long_wma) or (not self.buy_when_short_below and short_wma > long_wma))}"
+        )
+        if not current_position:
+            if self.buy_when_short_below and short_wma < long_wma:
+                return OrderSignal(OrderSide.BUY)
+
+            if not self.buy_when_short_below and short_wma > long_wma:
+                return OrderSignal(OrderSide.BUY)
+
+        return None
+
+
+class TrailingStopLossStrategy(TradingStrategy):
+    """
+    Estratégia de stop loss dinâmico.
+    Acompanha o preço após a compra e ativa um stop loss quando o preço cai um percentual configurado.
+    """
+
+    def __init__(
+        self,
+        stop_loss_percent: Decimal | str = "1",
+        balance_percent: Decimal | str = "80",
+    ):
+        self.stop_loss_percent = Decimal(str(stop_loss_percent))
+        self.balance_percent = Decimal(str(balance_percent))
+
+        # Estado interno
+        self.highest_price_after_target = Decimal("0")
+
+    def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
+        """Calcula a quantidade a comprar baseado no saldo disponível"""
+        if balance >= Decimal("5"):
+            return Decimal("5") / price
+        quantity = (balance * (self.balance_percent / Decimal("100"))) / price
+        return quantity
+
+    def on_market_refresh(
+        self,
+        ticker: TickerData,
+        balance: Decimal | None,
+        current_position: Position | None,
+    ) -> OrderSignal | None:
+        current_price = ticker.buy
+
+        # Se não tem posição, verifica se deve comprar
+        if not current_position:
+            # Essa estratégia não contempla compra. Deixa o composer decidir.
+            # Reset do estado quando não há posição
+            self.highest_price_after_target = Decimal("0")
+            return OrderSignal(OrderSide.BUY)
+        else:
+            # Atualiza o preço mais alto após atingir o ganho alvo
+            if current_price > self.highest_price_after_target:
+                self.highest_price_after_target = current_price
+
+            # Calcula a queda percentual desde o pico
+            drop_percent = (
+                (self.highest_price_after_target - current_price)
+                / self.highest_price_after_target
+            ) * Decimal("100")
+            print(
+                f"StopLossStrategy: drop_percent={drop_percent:.2f}% from highest_price={self.highest_price_after_target:.9f} to current_price={current_price:.9f}"
+            )
+            # Ativa stop loss se cair o percentual configurado
+            if drop_percent >= self.stop_loss_percent:
+                return OrderSignal(
+                    OrderSide.SELL, current_position.entry_order.quantity
+                )
+
+        return None
+
+
+class TargetPercentStrategy(TradingStrategy):
+    """
+    Estratégia de Porcentagem de lucro alvo.
+    Ao conseguir porcentagem, vende.
+
+    """
+
+    def __init__(
+        self,
+        target_percent: Decimal | str = "1",
+        balance_percent: Decimal | str = "80",
+    ):
+        self.target_percent = Decimal(str(target_percent))
+        self.balance_percent = Decimal(str(balance_percent))
+
+        # Estado interno
+
+    def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
+        """Calcula a quantidade a comprar baseado no saldo disponível"""
+        if balance >= Decimal("5"):
+            return Decimal("5") / price
+        quantity = (balance * (self.balance_percent / Decimal("100"))) / price
+        return quantity
+
+    def on_market_refresh(
+        self,
+        ticker: TickerData,
+        balance: Decimal | None,
+        current_position: Position | None,
+    ) -> OrderSignal | None:
+        current_price = ticker.buy
+
+        # Se não tem posição, verifica se deve comprar
+        if not current_position:
+            # Essa estratégia não contempla compra. Deixa o composer decidir.
+            # Reset do estado quando não há posição
+            return OrderSignal(OrderSide.BUY)
+        else:
+            # Calcula o percentual do preco atual em relacão a posicao atual
+            current_percent = (
+                (current_price - current_position.entry_order.price) / current_price
+            ) * Decimal("100")
+            print(
+                f"StopLossStrategy: drop_percent={current_percent:.2f}% from entry_order.price={current_position.entry_order.price:.9f} to current_price={current_price:.9f}"
+            )
+            # Ativa stop loss se cair o percentual configurado
+            if current_percent >= self.target_percent:
+                return OrderSignal(
+                    OrderSide.SELL, current_position.entry_order.quantity
+                )
+
+        return None
+
+
+class StrategyComposer(TradingStrategy):
+    """
+    Compositor de estratégias de trading.
+    Combina múltiplas estratégias e executa caso todas sejam válidas.
+    """
+
+    # def __init__(self, strategies: list[TradingStrategy]):
+    def __init__(self, sell_mode=str("all"), buy_mode=str("all")):
+        assert sell_mode in ("all", "any")
+        assert buy_mode in ("all", "any")
+        self.sell_mode = sell_mode
+        self.buy_mode = buy_mode
+
+        self.buy_strategies = [
+            WeightedMovingAverageStrategy(
+                short_window=25, long_window=100, buy_when_short_below=True, period=15
+            ),
+            WeightedMovingAverageStrategy(
+                short_window=6,
+                long_window=12,
+                buy_when_short_below=True,
+                period=15,
+                shift_past=10,
+            ),
+            WeightedMovingAverageStrategy(
+                short_window=6, long_window=12, buy_when_short_below=False, period=15
+            ),
+        ]
+        self.sell_strategies = [
+            TrailingStopLossStrategy(stop_loss_percent="0.2"),
+            TargetPercentStrategy(target_percent="0.5"),
+        ]
+
+    def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
+        # Usa a estratégia principal (primeira da lista) para calcular a quantidade
+        return self.buy_strategies[0].calculate_quantity(balance, price)
+
+    def setup(self, ticker_history):
+        for strategy in self.buy_strategies + self.sell_strategies:
+            strategy.setup(ticker_history)
+        return super().setup(ticker_history)
+
+    def _check_signals(self, signals, mode: str, side: OrderSide) -> bool:
+        if mode == "all":
+            return all(s and s.side == side for s in signals)
+        elif mode == "any":
+            return any(s and s.side == side for s in signals)
+        return False
+
+    def on_market_refresh(
+        self,
+        ticker: TickerData,
+        balance: Decimal | None,
+        current_position: Position | None,
+    ) -> OrderSignal | None:
+        signals = []
+        if current_position:
+            for strategy in self.sell_strategies:
+                signal = strategy.on_market_refresh(ticker, balance, current_position)
+                signals.append(signal)
+            if self._check_signals(signals, self.sell_mode, OrderSide.SELL):
+                print(f"Strategy SELL")
+                return OrderSignal(
+                    OrderSide.SELL, current_position.entry_order.quantity
+                )
+        else:
+            for strategy in self.buy_strategies:
+                signal = strategy.on_market_refresh(ticker, balance, current_position)
+                signals.append(signal)
+            if self._check_signals(signals, self.buy_mode, OrderSide.BUY):
+                print(f"Strategy BUY")
+                return OrderSignal(OrderSide.BUY)
 
         return None

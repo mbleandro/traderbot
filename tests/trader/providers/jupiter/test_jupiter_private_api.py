@@ -13,11 +13,11 @@ from solders.solders import (
     GetTokenAccountsByOwnerResp,
     LiteSVM,
     Message,
-    MessageV0,
     RpcKeyedAccount,
     RpcResponseContext,
     to_bytes_versioned,
     transfer,
+    MessageV0,
 )
 from solders.transaction import VersionedTransaction
 
@@ -169,7 +169,7 @@ class TestPlaceOrder:
         client = LiteSVM()
         client.airdrop(keypair.pubkey(), 1_000_000_000)
         blockhash = client.latest_blockhash()
-        api.client.get_latest_blockhash = lambda: SimpleNamespace(
+        api.client.get_latest_blockhash = lambda: SimpleNamespace(  # ty:ignore[invalid-assignment]
             value=SimpleNamespace(blockhash=blockhash)
         )  # type: ignore
         msg = Message.new_with_blockhash(ixs, keypair.pubkey(), blockhash)

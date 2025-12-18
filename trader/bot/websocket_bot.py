@@ -1,3 +1,6 @@
+from aiohttp.web import head
+import requests
+from requests.api import request
 import asyncio
 import json
 import traceback
@@ -54,6 +57,7 @@ class WebsocketTradingBot(BaseBot):
 
     def run(self, interval: int = 60):
         self.is_running = True
+        self.strategy.setup(self.get_candles())
         asyncio.run(self._run())
 
     async def connect_ws(self):
@@ -62,6 +66,46 @@ class WebsocketTradingBot(BaseBot):
             additional_headers={"Origin": "https://jup.ag"},
             compression="deflate",
         )
+
+    def get_candles(self) -> list[TickerData]:
+        end_time = int(datetime.now().timestamp() * 1000)
+        url = (
+            f"https://datapi.jup.ag/v2/charts/{self.token}"
+            f"?interval=15_SECOND&to={end_time}&candles=100&type=price&quote=usd"
+        )
+        response = None
+        try:
+            response = requests.get(
+                url,
+                headers={
+                    "Origin": "https://jup.ag",
+                    "Accept": "application/json",
+                    "User-Agent": "Mozilla/5.0",
+                },
+            )
+            response_json = response.json()
+        except Exception as ex:
+            ex.add_note(f"URL: {url}")
+            if response is not None:
+                ex.add_note(f"Status Code: {response.status_code}")
+                ex.add_note(f"Response: {response.text}")
+            raise ex
+        tickers: list[TickerData] = []
+        for candle in response_json["candles"]:
+            tickers.append(
+                TickerData(
+                    pair=self.symbol,
+                    timestamp=datetime.fromtimestamp(candle["time"]),
+                    high=Decimal(candle["high"]),
+                    low=Decimal(candle["low"]),
+                    open=Decimal(candle["open"]),
+                    last=Decimal(candle["close"]),
+                    buy=Decimal(candle["open"]),
+                    sell=Decimal(candle["open"]),
+                    vol=Decimal(candle["volume"]),
+                )
+            )
+        return tickers
 
     async def _run(self):
         should_stop = False
@@ -78,7 +122,11 @@ class WebsocketTradingBot(BaseBot):
                 while True:
                     try:
                         current_ticker = await self.get_current_ticker(ws)
-                        log_ticker(self.symbol, current_ticker.last)
+                        log_ticker(
+                            self.symbol,
+                            current_ticker.last,
+                            self.account.get_total_realized_pnl(),
+                        )
 
                         order = self.process_market_data(current_ticker)
                         if order:
@@ -119,9 +167,14 @@ class WebsocketTradingBot(BaseBot):
                 await asyncio.sleep(2)  # Espera antes de tentar reconectar
 
 
-def log_ticker(symbol: str, price: Decimal):
+def log_ticker(symbol: str, price: Decimal, realized_pnl: Decimal | None = None):
     fiat_symbol = symbol.split("-")[1]
-    console.print(f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}.")
+    if realized_pnl is not None:
+        console.print(
+            f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}. PNL Realizado: R$ {realized_pnl:.9f}"
+        )
+    else:
+        console.print(f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}.")
 
 
 def log_placed_order(order: Order):
@@ -139,12 +192,12 @@ def log_placed_order(order: Order):
 
 def log_position(position: Position, current_price: Decimal):
     pnl = (
-        position.unrealized_pnl(current_price)
+        position.unrealized_pnl_percent(current_price)
         if position.exit_order is None
-        else position.realized_pnl
+        else position.realized_pnl_percent
     )
     pnl_style = "bold green" if pnl > 0 else "bold red"
-    pnl_str = f"[{pnl_style}]R$ {pnl:.2f}[/{pnl_style}]"
+    pnl_str = f"[{pnl_style}]{pnl:.2f}%[/{pnl_style}]"
 
     console.print(
         f"{position.type.name} {position.entry_order.quantity:.8f} @ R$ {position.entry_order.price:.2f}. PNL: {pnl_str}"
