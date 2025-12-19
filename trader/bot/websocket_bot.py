@@ -18,6 +18,7 @@ from trader.bot.base_bot import BaseBot
 from trader.models.order import Order
 from trader.models.position import Position
 from trader.models.public_data import TickerData
+from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
 
 console = Console()
 
@@ -37,135 +38,55 @@ class WebsocketTradingBot(BaseBot):
             "TURBO": "2Dyzu65QA9zdX1UeE7Gx71k7fiwyUK6sZdrvJ7auq5wm",
         }[self.in_symbol]
 
-    async def get_current_ticker(
-        self, ws: websockets.asyncio.client.ClientConnection
-    ) -> TickerData:
-        msg = await ws.recv()
-        # '{"type":"prices","data":[{"assetId":"DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263","price":0.000010537070513205161,"blockId":380968492}]}'
-        json_msg = json.loads(msg)
-        price = Decimal(json_msg["data"][0]["price"])
-        return TickerData(
-            buy=price,
-            timestamp=datetime.now(),
-            high=price,  # Não disponível, usa preço atual
-            last=price,
-            low=price,  # Não disponível, usa preço atual
-            open=price,  # Não disponível, usa preço atual
-            pair=self.symbol,
-            sell=price,
-            vol=Decimal("0"),  # Não disponível via quote API
-        )
+        self.client = AsyncJupiterClient()
 
     def run(self, **kwargs):
         self.is_running = True
-        self.strategy.setup(self.get_candles())
         asyncio.run(self._run())
 
-    async def connect_ws(self):
-        return await websockets.connect(
-            "wss://trench-stream.jup.ag/ws",
-            additional_headers={"Origin": "https://jup.ag"},
-            compression="deflate",
-        )
-
-    def get_candles(self) -> list[TickerData]:
-        end_time = int(datetime.now().timestamp() * 1000)
-        url = (
-            f"https://datapi.jup.ag/v2/charts/{self.token}"
-            f"?interval=15_SECOND&to={end_time}&candles=100&type=price&quote=usd"
-        )
-        response = None
-        try:
-            response = requests.get(
-                url,
-                headers={
-                    "Origin": "https://jup.ag",
-                    "Accept": "application/json",
-                    "User-Agent": "Mozilla/5.0",
-                },
-            )
-            response_json = response.json()
-        except Exception as ex:
-            ex.add_note(f"URL: {url}")
-            if response is not None:
-                ex.add_note(f"Status Code: {response.status_code}")
-                ex.add_note(f"Response: {response.text}")
-            raise ex
-        tickers: list[TickerData] = []
-        for candle in response_json["candles"]:
-            tickers.append(
-                TickerData(
-                    pair=self.symbol,
-                    timestamp=datetime.fromtimestamp(candle["time"]),
-                    high=Decimal(candle["high"]),
-                    low=Decimal(candle["low"]),
-                    open=Decimal(candle["open"]),
-                    last=Decimal(candle["close"]),
-                    buy=Decimal(candle["open"]),
-                    sell=Decimal(candle["open"]),
-                    vol=Decimal(candle["volume"]),
-                )
-            )
-        return tickers
-
     async def _run(self):
+        self.strategy.setup(await self.client.get_candles(self.token))
         should_stop = False
+        self.notification_service.send_message(f"Bot iniciado para {self.symbol}")
+
         while not should_stop:
             try:
-                ws = await self.connect_ws()
-                await ws.send(
-                    json.dumps({"type": "subscribe:prices", "assets": [self.token]})
+                current_ticker = await self.client.get_price_ticker_data(self.token)
+                log_ticker(
+                    self.symbol,
+                    current_ticker.last,
+                    self.account.get_total_realized_pnl(),
                 )
+
+                order = self.process_market_data(current_ticker)
+                if order:
+                    log_placed_order(order)
+                    self.notification_service.send_message(
+                        f"Ordem executada: {order.side.upper()} "
+                        f"{order.quantity:.8f} {self.symbol} @ "
+                        f"{self.in_symbol} {order.price:.2f}"
+                    )
+
+                position = self.account.get_position()
+                if position:
+                    log_position(position, current_ticker.last)
+
+            except websockets.exceptions.ConnectionClosedError:
+                self.logger.warning("Conexão WebSocket perdida. Reconnectando...")
                 self.notification_service.send_message(
-                    f"Bot iniciado para {self.symbol}"
+                    "Conexão WebSocket perdida. Reconnectando..."
                 )
+                break  # Sai do loop interno e volta para tentar reconectar
 
-                while True:
-                    try:
-                        current_ticker = await self.get_current_ticker(ws)
-                        log_ticker(
-                            self.symbol,
-                            current_ticker.last,
-                            self.account.get_total_realized_pnl(),
-                        )
-
-                        order = self.process_market_data(current_ticker)
-                        if order:
-                            log_placed_order(order)
-                            self.notification_service.send_message(
-                                f"Ordem executada: {order.side.upper()} "
-                                f"{order.quantity:.8f} {self.symbol} @ "
-                                f"{self.in_symbol} {order.price:.2f}"
-                            )
-
-                        position = self.account.get_position()
-                        if position:
-                            log_position(position, current_ticker.last)
-
-                    except websockets.exceptions.ConnectionClosedError:
-                        self.logger.warning(
-                            "Conexão WebSocket perdida. Reconnectando..."
-                        )
-                        self.notification_service.send_message(
-                            "Conexão WebSocket perdida. Reconnectando..."
-                        )
-                        break  # Sai do loop interno e volta para tentar reconectar
-
-                    except KeyboardInterrupt:
-                        self.logger.warning("Bot interrompido pelo usuário")
-                        self.notification_service.send_message(
-                            "Bot interrompido pelo usuário"
-                        )
-                        should_stop = True
-                        return
-
-                    except Exception as ex:
-                        self.logger.error(f"Erro no loop principal: {str(ex)}")
-                        traceback.print_exc()
+            except KeyboardInterrupt:
+                self.logger.warning("Bot interrompido pelo usuário")
+                self.notification_service.send_message("Bot interrompido pelo usuário")
+                should_stop = True
+                return
 
             except Exception as ex:
-                self.logger.error(f"Erro ao conectar WebSocket: {str(ex)}")
-                await asyncio.sleep(2)  # Espera antes de tentar reconectar
+                self.logger.error(f"Erro no loop principal: {str(ex)}")
+                traceback.print_exc()
 
 
 def log_ticker(symbol: str, price: Decimal, realized_pnl: Decimal | None = None):

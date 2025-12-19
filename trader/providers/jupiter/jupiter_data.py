@@ -11,27 +11,27 @@ from typing import Any, Dict, List, Optional
 class JupiterSwapInfo:
     """Informações sobre um swap individual em uma rota"""
 
-    amm_key: str
+    ammKey: str
     label: str
-    input_mint: str
-    output_mint: str
-    in_amount: str
-    out_amount: str
-    fee_amount: str
-    fee_mint: str
+    inputMint: str
+    outputMint: str
+    inAmount: str
+    outAmount: str
+    feeAmount: str
+    feeMint: str
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "JupiterSwapInfo":
         """Cria uma instância JupiterSwapInfo a partir de um dicionário"""
         return cls(
-            amm_key=data["ammKey"],
+            ammKey=data["ammKey"],
             label=data["label"],
-            input_mint=data["inputMint"],
-            output_mint=data["outputMint"],
-            in_amount=data["inAmount"],
-            out_amount=data["outAmount"],
-            fee_amount=data["feeAmount"],
-            fee_mint=data["feeMint"],
+            inputMint=data["inputMint"],
+            outputMint=data["outputMint"],
+            inAmount=data["inAmount"],
+            outAmount=data["outAmount"],
+            feeAmount=data["feeAmount"],
+            feeMint=data["feeMint"],
         )
 
 
@@ -39,14 +39,14 @@ class JupiterSwapInfo:
 class JupiterRoutePlan:
     """Plano de rota para um swap"""
 
-    swap_info: JupiterSwapInfo
+    swapInfo: JupiterSwapInfo
     percent: int
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "JupiterRoutePlan":
         """Cria uma instância JupiterRoutePlan a partir de um dicionário"""
         return cls(
-            swap_info=JupiterSwapInfo.from_dict(data["swapInfo"]),
+            swapInfo=JupiterSwapInfo.from_dict(data["swapInfo"]),
             percent=data["percent"],
         )
 
@@ -55,35 +55,35 @@ class JupiterRoutePlan:
 class JupiterQuoteResponse:
     """Resposta da API de quote da Jupiter"""
 
-    input_mint: str
-    in_amount: str
-    output_mint: str
-    out_amount: str
-    other_amount_threshold: str
-    swap_mode: str
-    slippage_bps: int
-    platform_fee: Optional[Dict[str, Any]]
-    price_impact_pct: str
-    route_plan: List[JupiterRoutePlan]
-    context_slot: Optional[int]
-    time_taken: Optional[float]
+    inputMint: str
+    inAmount: str
+    outputMint: str
+    outAmount: str
+    otherAmountThreshold: str
+    swapMode: str
+    slippageBps: int
+    platformFee: Optional[Dict[str, Any]]
+    priceImpactPct: str
+    routePlan: List[JupiterRoutePlan]
+    contextSlot: Optional[int]
+    timeTaken: Optional[float]
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "JupiterQuoteResponse":
         """Cria uma instância JupiterQuoteResponse a partir de um dicionário"""
         return cls(
-            input_mint=data["inputMint"],
-            in_amount=data["inAmount"],
-            output_mint=data["outputMint"],
-            out_amount=data["outAmount"],
-            other_amount_threshold=data["otherAmountThreshold"],
-            swap_mode=data["swapMode"],
-            slippage_bps=data["slippageBps"],
-            platform_fee=data.get("platformFee"),
-            price_impact_pct=data["priceImpactPct"],
-            route_plan=[JupiterRoutePlan.from_dict(rp) for rp in data["routePlan"]],
-            context_slot=data.get("contextSlot"),
-            time_taken=data.get("timeTaken"),
+            inputMint=data["inputMint"],
+            inAmount=data["inAmount"],
+            outputMint=data["outputMint"],
+            outAmount=data["outAmount"],
+            otherAmountThreshold=data["otherAmountThreshold"],
+            swapMode=data["swapMode"],
+            slippageBps=data["slippageBps"],
+            platformFee=data.get("platformFee"),
+            priceImpactPct=data["priceImpactPct"],
+            routePlan=[JupiterRoutePlan.from_dict(rp) for rp in data["routePlan"]],
+            contextSlot=data.get("contextSlot"),
+            timeTaken=data.get("timeTaken"),
         )
 
 

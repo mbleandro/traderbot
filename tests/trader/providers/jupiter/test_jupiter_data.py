@@ -23,10 +23,10 @@ class TestJupiterSwapInfo:
             "feeMint": "So11111111111111111111111111111111111111112",
         }
         swap_info = JupiterSwapInfo.from_dict(data)
-        assert swap_info.amm_key == "11111111111111111111111111111111"
+        assert swap_info.ammKey == "11111111111111111111111111111111"
         assert swap_info.label == "Raydium"
-        assert swap_info.input_mint == "So11111111111111111111111111111111111111112"
-        assert swap_info.fee_amount == "50000"
+        assert swap_info.inputMint == "So11111111111111111111111111111111111111112"
+        assert swap_info.feeAmount == "50000"
 
 
 class TestJupiterRoutePlan:
@@ -46,7 +46,7 @@ class TestJupiterRoutePlan:
         }
         route_plan = JupiterRoutePlan.from_dict(data)
         assert route_plan.percent == 100
-        assert route_plan.swap_info.label == "Raydium"
+        assert route_plan.swapInfo.label == "Raydium"
 
 
 class TestJupiterQuoteResponse:
@@ -80,9 +80,9 @@ class TestJupiterQuoteResponse:
             "timeTaken": 0.5,
         }
         quote = JupiterQuoteResponse.from_dict(data)
-        assert quote.input_mint == "So11111111111111111111111111111111111111112"
-        assert quote.slippage_bps == 50
-        assert len(quote.route_plan) == 1
+        assert quote.inputMint == "So11111111111111111111111111111111111111112"
+        assert quote.slippageBps == 50
+        assert len(quote.routePlan) == 1
 
 
 class TestJupiterSwapResponse:

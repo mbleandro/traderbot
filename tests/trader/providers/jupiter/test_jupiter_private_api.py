@@ -1,10 +1,12 @@
+import httpx
+from trader.models import JupiterRoutePlan, JupiterSwapInfo, JupiterQuoteResponse
 import os
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest import mock
 
 import pytest
-from solana.rpc.api import Client as SolanaClient
+from solana.rpc.async_api import AsyncClient as SolanaClient
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.solders import (
@@ -22,7 +24,7 @@ from solders.solders import (
 from solders.transaction import VersionedTransaction
 
 from trader.models.account_data import AccountBalanceData
-from trader.providers.jupiter.jupiter_adapter import JupiterPrivateAPI
+from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
 
 
 @pytest.fixture()
@@ -82,30 +84,30 @@ def mock_get_token_accounts_by_owner():
         yield
 
 
-class TestJupiterPrivateAPI:
+class TestAsyncJupiterService:
     def test_init(self, setenvvar):
         keypair = Keypair()
-        api = JupiterPrivateAPI(keypair)
-        assert api.rpc_url == "https://mock.com"
+        api = AsyncJupiterService(keypair)
+        assert api.rpc_client.rpc_url == "https://mock.com"
 
         assert isinstance(api.wallet, Pubkey)
-        assert isinstance(api.client, SolanaClient)
+        assert isinstance(api.rpc_client.client, SolanaClient)
         assert isinstance(api.keypair, Keypair)
         assert api.keypair == keypair
         assert api.wallet_public_key == str(keypair.pubkey())
 
-    def test_get_account_balance(
+    async def test_get_account_balance(
         self, setenvvar, mock_get_account_info, mock_get_token_accounts_by_owner
     ):
-        api = JupiterPrivateAPI(Keypair())
+        api = AsyncJupiterService(Keypair())
 
-        balance = api.get_account_balance()
+        balance = await api.get_account_balance()
         assert balance == [
             AccountBalanceData(
-                available=Decimal("123.456789"),
+                available=Decimal("0.123456789"),
                 on_hold=Decimal("0"),
                 symbol="SOL",
-                total=Decimal("123.456789"),
+                total=Decimal("0.123456789"),
             )
         ]
 
@@ -113,44 +115,149 @@ class TestJupiterPrivateAPI:
 class TestPlaceOrder:
     @pytest.fixture(autouse=True)
     def setup_tests(self, setenvvar):
-        self.api = JupiterPrivateAPI(Keypair())
+        self.api = AsyncJupiterService(Keypair())
 
-    @mock.patch("requests.get")
-    def test_get_quote_with_route(self, mock_get):
-        mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = {"routePlan": "test_route"}
-        quote = self.api._get_quote_with_route(
+    @mock.patch.object(httpx.AsyncClient, "request", new_callable=mock.AsyncMock)
+    async def test_get_quote_with_route(self, mock_get):
+        mock_response = mock.Mock()
+        mock_response.json.return_value = {
+            "inputMint": "So11111111111111111111111111111111111111112",
+            "inAmount": "1000000000",
+            "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "outAmount": "50000000",
+            "otherAmountThreshold": "49500000",
+            "swapMode": "ExactIn",
+            "slippageBps": 50,
+            "platformFee": None,
+            "priceImpactPct": "0.5",
+            "routePlan": [
+                {
+                    "swapInfo": {
+                        "ammKey": "key",
+                        "label": "Raydium",
+                        "inputMint": "mint1",
+                        "outputMint": "mint2",
+                        "inAmount": "1000",
+                        "outAmount": "500",
+                        "feeAmount": "10",
+                        "feeMint": "mint1",
+                    },
+                    "percent": 100,
+                }
+            ],
+            "contextSlot": 123456789,
+            "timeTaken": 0.5,
+        }
+
+        mock_get.return_value = mock_response
+        quote = await self.api._get_quote_with_route(
             mint_in="So11111111111111111111111111111111111111112",
             mint_out="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
             amount_in=1000000000,
             slippage_bps=50,
         )
-        assert quote == {"routePlan": "test_route"}
+        assert quote == JupiterQuoteResponse(
+            inputMint="So11111111111111111111111111111111111111112",
+            inAmount="1000000000",
+            outputMint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            outAmount="50000000",
+            otherAmountThreshold="49500000",
+            swapMode="ExactIn",
+            slippageBps=50,
+            platformFee=None,
+            priceImpactPct="0.5",
+            routePlan=[
+                JupiterRoutePlan(
+                    swapInfo=JupiterSwapInfo(
+                        ammKey="key",
+                        label="Raydium",
+                        inputMint="mint1",
+                        outputMint="mint2",
+                        inAmount="1000",
+                        outAmount="500",
+                        feeAmount="10",
+                        feeMint="mint1",
+                    ),
+                    percent=100,
+                )
+            ],
+            contextSlot=123456789,
+            timeTaken=0.5,
+        )
 
-    @mock.patch("requests.get")
-    def test_get_quote_with_route_no_route(self, mock_get):
-        mock_get.return_value.json.return_value = {}
+    @mock.patch.object(httpx.AsyncClient, "request", new_callable=mock.AsyncMock)
+    async def test_get_quote_with_route_no_route(self, mock_get):
+        mock_response = mock.Mock()
+        mock_response.json.return_value = {
+            "inputMint": "So11111111111111111111111111111111111111112",
+            "inAmount": "1000000000",
+            "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "outAmount": "50000000",
+            "otherAmountThreshold": "49500000",
+            "swapMode": "ExactIn",
+            "slippageBps": 50,
+            "platformFee": None,
+            "priceImpactPct": "0.5",
+            "routePlan": [],
+            "contextSlot": 123456789,
+            "timeTaken": 0.5,
+        }
+
+        mock_get.return_value = mock_response
         with pytest.raises(Exception, match="Nenhuma rota encontrada!"):
-            self.api._get_quote_with_route(
+            await self.api._get_quote_with_route(
                 mint_in="So11111111111111111111111111111111111111112",
                 mint_out="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
                 amount_in=1000000000,
                 slippage_bps=50,
             )
 
-    @mock.patch("requests.post")
-    def test_get_swap_transaction(self, mock_post):
-        mock_post.return_value.json.return_value = {
+    @mock.patch.object(httpx.AsyncClient, "post", new_callable=mock.AsyncMock)
+    async def test_get_swap_transaction(self, mock_post):
+        mock_response = mock.Mock()
+        mock_response.json.return_value = {
             "swapTransaction": "AbuRLtc5C9bZtAUT4F4Y2H5SRRUK1HwOFZOK3V4qm/78MDJt+M2de/RCCaI3iTyodDepmrkUWbss0XRHS0lk5AOAAQABAzfDSQC/GjcggrLsDpYz7jAlT+Gca846HqtFb8UQMM9cCWPIi4AX32PV8HrY7/1WgoRc3IATttceZsUMeQ1qx7UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2dTRgcJmzcoGH1R3c2WqtHah2H19KvbC1p6BxLDqfoAQICAAEMAgAAAADKmjsAAAAAAA=="
         }
-        tx = self.api._get_swap_transaction(quote={"routePlan": "test_route"})
+
+        mock_post.return_value = mock_response
+
+        tx = await self.api._get_swap_transaction(
+            quote=JupiterQuoteResponse(
+                inputMint="So11111111111111111111111111111111111111112",
+                inAmount="1000000000",
+                outputMint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                outAmount="50000000",
+                otherAmountThreshold="49500000",
+                swapMode="ExactIn",
+                slippageBps=50,
+                platformFee=None,
+                priceImpactPct="0.5",
+                routePlan=[
+                    JupiterRoutePlan(
+                        swapInfo=JupiterSwapInfo(
+                            ammKey="FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH",
+                            label="HumidiFi",
+                            inputMint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                            outputMint="So11111111111111111111111111111111111111112",
+                            inAmount="1000000000",
+                            outAmount="7106793162",
+                            feeAmount="0",
+                            feeMint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                        ),
+                        percent=100,
+                    )
+                ],
+                contextSlot=123456789,
+                timeTaken=0.5,
+            )
+        )
         assert isinstance(tx, VersionedTransaction)
 
-    def test_get_signed_transaction(self):
+    async def test_get_signed_transaction(self):
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 
-        api = JupiterPrivateAPI(keypair=keypair)
+        api = AsyncJupiterService(keypair=keypair)
         api.keypair = keypair
         ixs = [
             transfer(
@@ -165,9 +272,11 @@ class TestPlaceOrder:
         client = LiteSVM()
         client.airdrop(keypair.pubkey(), 1_000_000_000)
         blockhash = client.latest_blockhash()
-        api.client.get_latest_blockhash = lambda: SimpleNamespace(  # ty:ignore[invalid-assignment]
-            value=SimpleNamespace(blockhash=blockhash)
-        )  # type: ignore
+
+        async def latest_block():
+            return SimpleNamespace(value=SimpleNamespace(blockhash=blockhash))
+
+        api.rpc_client.client.get_latest_blockhash = latest_block  # type: ignore
         msg = Message.new_with_blockhash(ixs, keypair.pubkey(), blockhash)
         message = MessageV0(
             header=msg.header,
@@ -177,18 +286,18 @@ class TestPlaceOrder:
             address_table_lookups=[],
         )
         tx = VersionedTransaction(message, [keypair])
-        signed_tx = api._get_signed_transaction(tx=tx)
+        signed_tx = await api._get_signed_transaction(tx=tx)
         assert isinstance(signed_tx, VersionedTransaction)
         assert signed_tx.signatures[0].verify(
             keypair.pubkey(), to_bytes_versioned(signed_tx.message)
         )
 
-    def test_send_signed_transaction(self):
+    async def test_send_signed_transaction(self):
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 
-        api = JupiterPrivateAPI(keypair=keypair)
-        api.keypair = keypair
+        service = AsyncJupiterService(keypair=keypair)
+        service.keypair = keypair
         ixs = [
             transfer(
                 {
@@ -206,17 +315,17 @@ class TestPlaceOrder:
         tx = VersionedTransaction(msg, [keypair])
         tx.signatures = [keypair.sign_message(to_bytes_versioned(msg))]
 
-        def _simulate_transaction(x):
+        async def _simulate_transaction(x):
             # signature = client.simulate_transaction(x).meta().signature()
 
             return SimpleNamespace(value=SimpleNamespace(err=None))
 
-        def _send_raw_transaction(x):
+        async def _send_raw_transaction(x):
             signature = client.simulate_transaction(tx).meta().signature()
 
             return SimpleNamespace(value=signature)
 
-        api.client.simulate_transaction = _simulate_transaction  # type: ignore
-        api.client.send_raw_transaction = _send_raw_transaction  # type: ignore
-        resp = api._send_signed_transaction(tx)
+        service.rpc_client.client.simulate_transaction = _simulate_transaction  # type: ignore
+        service.rpc_client.client.send_raw_transaction = _send_raw_transaction  # type: ignore
+        resp = await service._send_signed_transaction(tx)
         assert resp.value is not None

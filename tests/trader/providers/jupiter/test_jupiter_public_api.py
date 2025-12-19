@@ -54,32 +54,32 @@ class TestJupiterPublicAPI:
 
         def _assert_response(self, response: JupiterQuoteResponse):
             assert response == JupiterQuoteResponse(
-                input_mint="So11111111111111111111111111111111111111112",
-                in_amount="1000000000",
-                output_mint="EPjFWdd5Au...",
-                out_amount="50000000",
-                other_amount_threshold="49500000",
-                swap_mode="ExactIn",
-                slippage_bps=50,
-                platform_fee=None,
-                price_impact_pct="0.5",
-                route_plan=[
+                inputMint="So11111111111111111111111111111111111111112",
+                inAmount="1000000000",
+                outputMint="EPjFWdd5Au...",
+                outAmount="50000000",
+                otherAmountThreshold="49500000",
+                swapMode="ExactIn",
+                slippageBps=50,
+                platformFee=None,
+                priceImpactPct="0.5",
+                routePlan=[
                     JupiterRoutePlan(
-                        swap_info=JupiterSwapInfo(
-                            amm_key="FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH",
+                        swapInfo=JupiterSwapInfo(
+                            ammKey="FksffEqnBRixYGR791Qw2MgdU7zNCpHVFYBL4Fa4qVuH",
                             label="HumidiFi",
-                            input_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-                            output_mint="So11111111111111111111111111111111111111112",
-                            in_amount="1000000000",
-                            out_amount="7106793162",
-                            fee_amount="0",
-                            fee_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                            inputMint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                            outputMint="So11111111111111111111111111111111111111112",
+                            inAmount="1000000000",
+                            outAmount="7106793162",
+                            feeAmount="0",
+                            feeMint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
                         ),
                         percent=100,
                     )
                 ],
-                context_slot=123456789,
-                time_taken=0.5,
+                contextSlot=123456789,
+                timeTaken=0.5,
             )
 
         @mock.patch.object(

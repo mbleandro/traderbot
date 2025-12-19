@@ -123,9 +123,7 @@ class JupiterPublicAPIAdapter(PublicAPIBase):
             )
 
             # Calcula o preço: output_amount / input_amount
-            buy_price = (
-                Decimal(buy_quote.in_amount) / Decimal(buy_quote.out_amount) / 10
-            )
+            buy_price = Decimal(buy_quote.inAmount) / Decimal(buy_quote.outAmount) / 10
 
             quote_sell = self.jupiter_api.get_quote(
                 input_mint=output_mint,
@@ -134,7 +132,7 @@ class JupiterPublicAPIAdapter(PublicAPIBase):
                 slippage_bps=50,
             )
             sell_price = (
-                Decimal(quote_sell.out_amount) / Decimal(quote_sell.in_amount) / 10
+                Decimal(quote_sell.outAmount) / Decimal(quote_sell.inAmount) / 10
             )
 
             spread = (sell_price - buy_price) / buy_price * 100
@@ -242,7 +240,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
         resp = self.client.get_account_info(self.wallet)
         if resp.value:
             lamports = resp.value.lamports
-            sol = lamports / 1_000_000
+            sol = lamports / SOLANA_TOKENS_DECIMALS["SOL"]
 
             if sol > 0:
                 balances.append(
