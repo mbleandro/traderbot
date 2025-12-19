@@ -4,7 +4,7 @@ import typer
 
 from trader import get_strategy_cls
 from trader.account import Account
-from trader.bot import BaseBot, TradingBot, WebsocketTradingBot
+from trader.bot import BaseBot, WebsocketTradingBot
 from trader.notification.notification_service import (
     NullNotificationService,
     TelegramNotificationService,
@@ -67,7 +67,7 @@ def run(
         ..., help="Chave pública da wallet (para Jupiter)"
     ),
     websocket: bool = typer.Option(
-        False, help="Use WebSocket para atualização de preços"
+        True, help="Use WebSocket para atualização de preços"
     ),
     dry: bool = typer.Option(
         False, help="Se True, executa em modo dry-run (sem realizar a transacão final)"
@@ -101,11 +101,8 @@ def run(
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
     notification_svc = _get_notification_svc(notification_service, notification_args)
 
-    if websocket:
-        bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
-    else:
-        bot = TradingBot(public_api, strategy_obj, account, notification_svc)
-    run_bot(bot, interval)
+    bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
+    run_bot(bot)
 
 
 @app.command()
@@ -138,11 +135,8 @@ def fake(
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
     notification_svc = _get_notification_svc(notification_service, notification_args)
 
-    if websocket:
-        bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
-    else:
-        bot = TradingBot(public_api, strategy_obj, account, notification_svc)
-    run_bot(bot, interval)
+    bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
+    run_bot(bot)
 
 
 def parse_kwargs(argv: list[str]) -> dict[str, str]:
@@ -169,9 +163,9 @@ def _get_strategy_obj(strategy: str, strategy_args: str | None = None):
         raise Exception(f"Erro ao configurar estratégia: {ex}") from ex
 
 
-def run_bot(bot: BaseBot, interval: int):
+def run_bot(bot: BaseBot):
     try:
-        bot.run(interval=int(interval))
+        bot.run()
     except KeyboardInterrupt:
         bot.stop()
 
