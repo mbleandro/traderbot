@@ -36,8 +36,8 @@ rundry: ## Executa o bot principal com dados reais, mas com a estrategia com par
 rundrycomposer_sol:
 	$(UV) run --env-file .env main.py run SOL-USDC composer 10 'buy_mode=all sell_mode=any' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
 
-rundrycomposer_bonk:
-	$(UV) run --env-file .env main.py run BONK-USDC composer 10 'buy_mode=all sell_mode=all' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
+startdry:
+	$(UV) run --env-file .env main.py start dry
 
 
 run: ## Executa o bot principal

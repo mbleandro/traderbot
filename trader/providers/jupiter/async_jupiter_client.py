@@ -119,21 +119,7 @@ class AsyncJupiterClient:
                 ex.add_note(f"Response: {response.text}")
             raise ex
 
-    async def get_price_ticker_data(self, mint) -> TickerData:
-        price = await self.get_price(mint)
-        return TickerData(
-            buy=price,
-            timestamp=datetime.now(),
-            high=price,  # Não disponível, usa preço atual
-            last=price,
-            low=price,  # Não disponível, usa preço atual
-            open=price,  # Não disponível, usa preço atual
-            pair="ignored",
-            sell=price,
-            vol=Decimal("0"),  # Não disponível via quote API
-        )
-
-    async def get_price(self, mint) -> Decimal:
+    async def get_price(self, mint: str) -> Decimal:
         try:
             if not self.websocket:
                 self.websocket = await self._connect_price_ws(mint)
@@ -151,7 +137,7 @@ class AsyncJupiterClient:
         price = Decimal(json_msg["data"][0]["price"])
         return price
 
-    async def _connect_price_ws(self, mint):
+    async def _connect_price_ws(self, mint: str):
         ws = await websockets.connect(
             "wss://trench-stream.jup.ag/ws",
             additional_headers={"Origin": "https://jup.ag"},

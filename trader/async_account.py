@@ -1,4 +1,3 @@
-from trader.providers import SOLANA_TOKENS
 from solders.pubkey import Pubkey
 import logging
 from datetime import datetime
@@ -8,8 +7,7 @@ from trader.models.order import Order
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
 from trader.providers.jupiter.jupiter_public_api import SOLANA_TOKENS_BY_MINT
 
-from .models import OrderSide, Position, PositionType
-from .providers.base_api import PrivateAPIBase
+from .models import OrderSide, Position, PositionType, TickerData
 
 
 class AsyncAccount:
@@ -25,6 +23,12 @@ class AsyncAccount:
         self.current_position: Position | None = None
         self.logger = logging.getLogger("Account")
         self.total_pnl = Decimal("0.0")
+
+    async def get_price(self, mint: Pubkey) -> TickerData:
+        return await self.api.get_price_ticker_data(mint)
+
+    async def get_candles(self, mint: Pubkey) -> list[TickerData]:
+        return await self.api.get_candles(mint)
 
     async def get_balance(self, mint: Pubkey) -> Decimal:
         """Obtém saldo de uma moeda específica"""

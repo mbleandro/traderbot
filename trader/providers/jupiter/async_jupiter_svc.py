@@ -3,9 +3,10 @@ Adaptadores para a API Jupiter que implementam as interfaces base.
 Permite usar Jupiter com a mesma interface do Mercado Bitcoin.
 """
 
+from datetime import datetime
 from solders.pubkey import Pubkey
 
-from trader.models import JupiterQuoteResponse
+from trader.models import JupiterQuoteResponse, TickerData
 
 import logging
 import os
@@ -16,10 +17,10 @@ from solders.keypair import Keypair
 from solders.solders import SendTransactionResp
 from solders.transaction import VersionedTransaction
 
-from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
+from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient, Interval
 from trader.providers.jupiter.async_rpc_client import AsyncRPCClient
 
-from ...models.account_data import AccountBalanceData, MintBalance
+from ...models.account_data import MintBalance
 from .jupiter_public_api import (
     SOLANA_TOKENS,
     SOLANA_TOKENS_BY_MINT,
@@ -42,6 +43,28 @@ class AsyncJupiterService:
         self.rpc_client = AsyncRPCClient()
         self.jupiter_client = AsyncJupiterClient()
         self.logger = logging.getLogger(__name__)
+
+    async def get_candles(
+        self,
+        mint: Pubkey,
+        interval: Interval = Interval.SECOND_15,
+        candle_qty: int = 100,
+    ) -> list[TickerData]:
+        return await self.jupiter_client.get_candles(str(mint))
+
+    async def get_price_ticker_data(self, mint: Pubkey) -> TickerData:
+        price = await self.jupiter_client.get_price(str(mint))
+        return TickerData(
+            buy=price,
+            timestamp=datetime.now(),
+            high=price,  # Não disponível, usa preço atual
+            last=price,
+            low=price,  # Não disponível, usa preço atual
+            open=price,  # Não disponível, usa preço atual
+            pair="ignored",
+            sell=price,
+            vol=Decimal("0"),  # Não disponível via quote API
+        )
 
     async def get_account_balance(self) -> List[MintBalance]:
         balances = []

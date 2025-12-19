@@ -2,22 +2,14 @@ from solders.pubkey import Pubkey
 from trader.async_account import AsyncAccount
 import logging
 from trader.models.bot_config import BotConfig
-from aiohttp.web import head
-import requests
-from requests.api import request
 import asyncio
-import json
 import traceback
-from datetime import datetime
 from decimal import Decimal
 
 import websockets
-import websockets.asyncio
-import websockets.asyncio.client
 from rich.console import Console
 from rich.text import Text
 
-from trader.bot.base_bot import BaseBot
 from trader.models.order import Order
 from trader.models.position import Position
 from trader.models.public_data import TickerData
@@ -51,8 +43,6 @@ class AsyncWebsocketTradingBot:
 
         self.total_pnl = Decimal("0.0")
 
-        self.client = AsyncJupiterClient()
-
     async def process_market_data(self, current_ticker: TickerData):
         position_signal = self.strategy.on_market_refresh(
             current_ticker,
@@ -82,15 +72,13 @@ class AsyncWebsocketTradingBot:
         asyncio.run(self._run())
 
     async def _run(self):
-        self.strategy.setup(await self.client.get_candles(str(self.mint_out)))
+        self.strategy.setup(await self.account.get_candles(self.mint_out))
         should_stop = False
         self.notification_service.send_message(f"Bot iniciado para {self.symbol}")
 
         while not should_stop:
             try:
-                current_ticker = await self.client.get_price_ticker_data(
-                    str(self.mint_out)
-                )
+                current_ticker = await self.account.get_price(self.mint_out)
                 log_ticker(
                     self.symbol,
                     current_ticker.last,
