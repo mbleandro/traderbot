@@ -39,21 +39,6 @@ class AsyncJupiterClient:
             }
         )
 
-    async def _make_request(
-        self, method, url, params, json_to_obj_factory: Callable[[dict], Any]
-    ):
-        response = await self.client.request(method, url, params=params)
-        try:
-            response.raise_for_status()
-            response_json = response.json()
-            return json_to_obj_factory(response_json)
-        except Exception as ex:
-            ex.add_note(f"URL: {url}")
-            if response:
-                ex.add_note(f"Status Code: {response.status_code}")
-                ex.add_note(f"Response: {response.text}")
-            raise ex
-
     async def get_quote(
         self,
         input_mint: str,
@@ -64,8 +49,8 @@ class AsyncJupiterClient:
         max_accounts: int | None = None,
     ) -> JupiterQuoteResponse:
         params: Dict[str, Any] = {
-            "inputMint": output_mint,
-            "outputMint": input_mint,
+            "inputMint": input_mint,
+            "outputMint": output_mint,
             "amount": str(amount),
             "slippageBps": str(slippage_bps),
         }
@@ -77,12 +62,17 @@ class AsyncJupiterClient:
             params["maxAccounts"] = str(max_accounts)
 
         url = "https://lite-api.jup.ag/swap/v1/quote"
-        return await self._make_request(
-            "GET",
-            url,
-            params,
-            lambda response_json: JupiterQuoteResponse.from_dict(response_json),
-        )
+        response = await self.client.request("GET", url, params=params)
+        try:
+            response.raise_for_status()
+            response_json = response.json()
+            return JupiterQuoteResponse.from_dict(response_json)
+        except Exception as ex:
+            ex.add_note(f"URL: {url}")
+            if response:
+                ex.add_note(f"Status Code: {response.status_code}")
+                ex.add_note(f"Response: {response.text}")
+            raise ex
 
     async def get_candles(
         self, mint: str, interval: Interval = Interval.SECOND_15, candle_qty: int = 100

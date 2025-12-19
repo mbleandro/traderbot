@@ -365,7 +365,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
         amount_in: int,
         slippage_bps: int = 50,
     ):
-        print("→ Criando rota na Jupiter...")
         response = None
         try:
             response = requests.get(
@@ -392,7 +391,6 @@ class JupiterPrivateAPI(PrivateAPIBase):
             raise ex
 
     def _get_swap_transaction(self, quote: Dict[str, Any]) -> VersionedTransaction:
-        print("→ Gerando transação de swap...")
         response = None
         try:
             response = requests.post(
@@ -418,7 +416,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
     def _get_signed_transaction(self, tx: VersionedTransaction) -> VersionedTransaction:
         # ---------- assinar ----------
-        print("→ Assinando transação...")
+
         latest = self.client.get_latest_blockhash()
         blockhash = latest.value.blockhash
         message = tx.message
@@ -444,7 +442,7 @@ class JupiterPrivateAPI(PrivateAPIBase):
         self, new_tx: VersionedTransaction
     ) -> SendTransactionResp:
         # ---------- enviar ----------
-        print("→ Enviando via Helius RPC...")
+
         simulation = self.client.simulate_transaction(new_tx)
         if simulation.value.err:
             raise Exception(f"Erro ao simular transação: {simulation.value}")

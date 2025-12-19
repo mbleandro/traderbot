@@ -40,6 +40,12 @@ def setenvvar(monkeypatch):
 
 
 @pytest.fixture()
+def mock_is_connected():
+    with mock.patch.object(SolanaClient, "is_connected", return_value=True):
+        yield
+
+
+@pytest.fixture()
 def mock_get_account_info():
     with mock.patch.object(
         SolanaClient,
@@ -97,7 +103,11 @@ class TestAsyncJupiterService:
         assert api.wallet_public_key == str(keypair.pubkey())
 
     async def test_get_account_balance(
-        self, setenvvar, mock_get_account_info, mock_get_token_accounts_by_owner
+        self,
+        setenvvar,
+        mock_get_account_info,
+        mock_get_token_accounts_by_owner,
+        mock_is_connected,
     ):
         api = AsyncJupiterService(Keypair())
 
@@ -253,7 +263,7 @@ class TestPlaceOrder:
         )
         assert isinstance(tx, VersionedTransaction)
 
-    async def test_get_signed_transaction(self):
+    async def test_get_signed_transaction(self, mock_is_connected):
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 
@@ -292,7 +302,7 @@ class TestPlaceOrder:
             keypair.pubkey(), to_bytes_versioned(signed_tx.message)
         )
 
-    async def test_send_signed_transaction(self):
+    async def test_send_signed_transaction(self, mock_is_connected):
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 

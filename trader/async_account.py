@@ -3,15 +3,16 @@ from datetime import datetime
 from decimal import Decimal
 
 from trader.models.order import Order
+from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
 
 from .models import OrderSide, Position, PositionType
 from .providers.base_api import PrivateAPIBase
 
 
-class Account:
+class AsyncAccount:
     """Classe responsável por gerenciar balanço, posições e execução de ordens"""
 
-    def __init__(self, api: PrivateAPIBase, symbol: str = "BTC-BRL"):
+    def __init__(self, api: AsyncJupiterService, symbol: str = "BTC-BRL"):
         self.api = api
         self.symbol = symbol
         self.coin_symbol, self.fiat_symbol = symbol.split("-")
@@ -20,9 +21,9 @@ class Account:
         self.logger = logging.getLogger("Account")
         self.total_pnl = Decimal("0.0")
 
-    def get_balance(self, currency: str) -> Decimal:
+    async def get_balance(self, currency: str) -> Decimal:
         """Obtém saldo de uma moeda específica"""
-        balances = self.api.get_account_balance()
+        balances = await self.api.get_account_balance()
         for balance in balances:
             if balance.symbol == currency:
                 return Decimal(str(balance.available))
@@ -32,7 +33,7 @@ class Account:
         """Retorna a posição atual"""
         return self.current_position
 
-    def can_buy(self) -> bool:
+    async def can_buy(self) -> bool:
         """Verifica se é possível executar uma compra"""
         # Não pode comprar se já tem posição long
         if (
@@ -40,12 +41,12 @@ class Account:
             and self.current_position.type == PositionType.LONG
         ):
             return False
-        # Verifica se tem saldo suficiente em BRL
-        brl_balance = self.get_balance(self.fiat_symbol)
-        print(self.fiat_symbol, brl_balance)
-        return brl_balance > Decimal("0.1")  # Mínimo para operar
 
-    def can_sell(self) -> bool:
+        brl_balance = await self.get_balance(self.fiat_symbol)
+        print(self.fiat_symbol, brl_balance)
+        return brl_balance > Decimal("0.01")  # Mínimo para operar
+
+    async def can_sell(self) -> bool:
         """Verifica se é possível executar uma venda"""
         # Só pode vender se tem posição long
         if (
@@ -54,22 +55,24 @@ class Account:
         ):
             return False
 
-        btc_balance = self.get_balance(self.coin_symbol)
+        btc_balance = await self.get_balance(self.coin_symbol)
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
-    def place_order(self, price: Decimal, side: OrderSide, quantity: Decimal) -> Order:
+    async def place_order(
+        self, price: Decimal, side: OrderSide, quantity: Decimal
+    ) -> Order:
         if side == OrderSide.BUY:
-            return self.buy(price, quantity)
+            return await self.buy(price, quantity)
         if side == OrderSide.SELL:
-            return self.sell(price, quantity)
+            return await self.sell(price, quantity)
 
         raise ValueError("Invalid Order Side.")
 
-    def buy(self, price: Decimal, quantity: Decimal) -> Order:
-        if not self.can_buy():
+    async def buy(self, price: Decimal, quantity: Decimal) -> Order:
+        if not await self.can_buy():
             raise ValueError("Não é possível executar compra no momento")
         try:
-            order_id = self.api.buy(
+            order_id = await self.api.buy(
                 symbol=self.symbol,
                 type_order="market",
                 quantity=str(quantity),
@@ -95,12 +98,12 @@ class Account:
             self.logger.error(f"Erro ao executar ordem: {str(ex)}")
             raise
 
-    def sell(self, price: Decimal, quantity: Decimal) -> Order:
-        if not self.can_sell():
+    async def sell(self, price: Decimal, quantity: Decimal) -> Order:
+        if not await self.can_sell():
             raise ValueError("Não é possível executar venda no momento")
 
         try:
-            order_id = self.api.sell(
+            order_id = await self.api.sell(
                 symbol=self.symbol,
                 type_order="market",
                 quantity=str(quantity),

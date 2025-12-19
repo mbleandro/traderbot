@@ -1,4 +1,6 @@
+from trader.bot.async_websocket_bot import AsyncWebsocketTradingBot
 import warnings
+from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
 from trader.trading_strategy import RandomStrategy
 from trader.models.bot_config import (
     create_bot_config,
@@ -119,9 +121,7 @@ def start(
 ):
     print(f"Starting bot on {str(mode)} mode")
     if mode == RunningMode.DRY:
-        provider = DryJupiterPrivateAPI(keypair=get_keypair_from_env())
-    if mode == RunningMode.REAL:
-        provider = JupiterPrivateAPI(keypair=get_keypair_from_env())
+        provider = AsyncJupiterService(keypair=get_keypair_from_env())
 
     config = create_bot_config(
         "my_config",
@@ -131,8 +131,11 @@ def start(
         NullNotificationService(),
     )
 
-    bot = WebsocketTradingBot(config)
-    run_bot(bot)
+    bot = AsyncWebsocketTradingBot(config)
+    try:
+        bot.run()
+    except KeyboardInterrupt:
+        bot.stop()
 
 
 def parse_kwargs(argv: list[str]) -> dict[str, str]:

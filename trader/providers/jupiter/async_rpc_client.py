@@ -1,3 +1,4 @@
+import asyncio
 from solders.signature import Signature
 from solana.rpc.types import TokenAccountOpts
 from spl.token.constants import TOKEN_2022_PROGRAM_ID
@@ -21,8 +22,12 @@ class AsyncRPCClient:
         self.rpc_url = os.getenv("HELIUS_RPC_URL")
         assert self.rpc_url, "RPC URL não definida"
         self.client = AsyncClient(self.rpc_url)
+        self.is_dryrun = True
 
     async def wait_for_confirmation(self, signature, timeout=30) -> bool:
+        if self.is_dryrun:
+            return True
+
         start = time.time()
 
         while True:
@@ -48,7 +53,9 @@ class AsyncRPCClient:
     async def sign_transaction(
         self, tx: VersionedTransaction, keypair: Keypair
     ) -> VersionedTransaction:
+        await self.client.is_connected()
         latest = await self.client.get_latest_blockhash()
+
         blockhash = latest.value.blockhash
         message = tx.message
         message = MessageV0(
@@ -70,20 +77,25 @@ class AsyncRPCClient:
         return new_tx
 
     async def simulate_transaction(self, new_tx: VersionedTransaction):
+        await self.client.is_connected()
         simulation = await self.client.simulate_transaction(new_tx)
         if simulation.value.err:
-            raise Exception(f"Erro ao simular transação: {simulation.value}")
+            raise Exception(f"Erro ao simular transação: {str(simulation.value.err)}")
 
     async def send_transaction(
         self, new_tx: VersionedTransaction
     ) -> SendTransactionResp:
-        # resp = await self.client.send_raw_transaction(bytes(new_tx))
-        # signature = resp.value
+        if self.is_dryrun:
+            return SendTransactionResp(value=Signature.new_unique())
 
-        # return resp
-        return SendTransactionResp(value=Signature.new_unique())
+        await self.client.is_connected()
+        resp = await self.client.send_raw_transaction(bytes(new_tx))
+        signature = resp.value
+
+        return resp
 
     async def get_balance(self, pubkey: Pubkey) -> Decimal:
+        await self.client.is_connected()
         resp = await self.client.get_account_info(pubkey)
         if resp.value:
             lamports = resp.value.lamports
@@ -92,6 +104,7 @@ class AsyncRPCClient:
         raise Exception(f"Não foi possivel obter o balanco da pubkey: {str(pubkey)}")
 
     async def get_lamports(self, pubkey: Pubkey) -> Decimal:
+        await self.client.is_connected()
         resp = await self.client.get_account_info(pubkey)
         if resp.value:
             lamports = resp.value.lamports
@@ -100,6 +113,7 @@ class AsyncRPCClient:
         raise Exception(f"Não foi possivel obter o balanco da pubkey: {str(pubkey)}")
 
     async def get_account_balance(self, owner: Pubkey) -> dict[Pubkey, Decimal]:
+        await self.client.is_connected()
         balances: dict[Pubkey, Decimal] = {}
 
         # ====================================================

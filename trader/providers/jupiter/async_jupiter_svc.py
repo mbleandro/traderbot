@@ -149,7 +149,6 @@ class AsyncJupiterService:
         amount_in: int,
         slippage_bps: int = 50,
     ) -> JupiterQuoteResponse:
-        print("→ Criando rota na Jupiter...")
         quote = await self.jupiter_client.get_quote(
             mint_in, mint_out, amount_in, slippage_bps
         )
@@ -163,7 +162,6 @@ class AsyncJupiterService:
     async def _get_swap_transaction(
         self, quote: JupiterQuoteResponse
     ) -> VersionedTransaction:
-        print("→ Gerando transação de swap...")
         return await self.jupiter_client.get_swap_transaction(
             quote, self.keypair.pubkey()
         )
@@ -172,14 +170,12 @@ class AsyncJupiterService:
         self, tx: VersionedTransaction
     ) -> VersionedTransaction:
         # ---------- assinar ----------
-        print("→ Assinando transação...")
         return await self.rpc_client.sign_transaction(tx, self.keypair)
 
     async def _send_signed_transaction(
         self, new_tx: VersionedTransaction
     ) -> SendTransactionResp:
         # ---------- enviar ----------
-        print("→ Enviando via Helius RPC...")
         await self.rpc_client.simulate_transaction(new_tx)
         resp = await self.rpc_client.send_transaction(new_tx)
         signature = resp.value
