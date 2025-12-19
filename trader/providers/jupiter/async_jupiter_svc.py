@@ -28,14 +28,7 @@ from .jupiter_public_api import (
 )
 
 
-class AsyncJupiterService:
-    @classmethod
-    def from_env(cls):
-        private_key = os.getenv("SOLANA_PRIVATE_KEY")
-        assert private_key, "Chave privada não definida"
-        keypair = Keypair.from_base58_string(private_key)
-        return cls(keypair)
-
+class AsyncJupiterProvider:
     def __init__(self, keypair: Keypair):
         self.keypair = keypair
         self.wallet = keypair.pubkey()

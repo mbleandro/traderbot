@@ -24,7 +24,7 @@ from solders.solders import (
 from solders.transaction import VersionedTransaction
 
 from trader.models.account_data import AccountBalanceData, MintBalance
-from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
+from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 
 
 @pytest.fixture()
@@ -90,10 +90,10 @@ def mock_get_token_accounts_by_owner():
         yield
 
 
-class TestAsyncJupiterService:
+class TestAsyncJupiterProvider:
     def test_init(self, setenvvar):
         keypair = Keypair()
-        api = AsyncJupiterService(keypair)
+        api = AsyncJupiterProvider(keypair)
         assert api.rpc_client.rpc_url == "https://mock.com"
 
         assert isinstance(api.wallet, Pubkey)
@@ -108,7 +108,7 @@ class TestAsyncJupiterService:
         mock_get_token_accounts_by_owner,
         mock_is_connected,
     ):
-        api = AsyncJupiterService(Keypair())
+        api = AsyncJupiterProvider(Keypair())
 
         balance = await api.get_account_balance()
         assert balance == [
@@ -122,7 +122,7 @@ class TestAsyncJupiterService:
 class TestPlaceOrder:
     @pytest.fixture(autouse=True)
     def setup_tests(self, setenvvar):
-        self.api = AsyncJupiterService(Keypair())
+        self.api = AsyncJupiterProvider(Keypair())
 
     @mock.patch.object(httpx.AsyncClient, "request", new_callable=mock.AsyncMock)
     async def test_get_quote_with_route(self, mock_get):
@@ -264,7 +264,7 @@ class TestPlaceOrder:
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 
-        api = AsyncJupiterService(keypair=keypair)
+        api = AsyncJupiterProvider(keypair=keypair)
         api.keypair = keypair
         ixs = [
             transfer(
@@ -303,7 +303,7 @@ class TestPlaceOrder:
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 
-        service = AsyncJupiterService(keypair=keypair)
+        service = AsyncJupiterProvider(keypair=keypair)
         service.keypair = keypair
         ixs = [
             transfer(

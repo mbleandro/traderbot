@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from trader.models.order import Order
-from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
+from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 from trader.providers.jupiter.jupiter_public_api import SOLANA_TOKENS_BY_MINT
 
 from .models import OrderSide, Position, PositionType, TickerData
@@ -13,8 +13,10 @@ from .models import OrderSide, Position, PositionType, TickerData
 class AsyncAccount:
     """Classe responsável por gerenciar balanço, posições e execução de ordens"""
 
-    def __init__(self, api: AsyncJupiterService, mint_in: Pubkey, mint_out: Pubkey):
-        self.api = api
+    def __init__(
+        self, provider: AsyncJupiterProvider, mint_in: Pubkey, mint_out: Pubkey
+    ):
+        self.provider = provider
         self.mint_in = mint_in
         self.mint_out = mint_out
 
@@ -25,14 +27,14 @@ class AsyncAccount:
         self.total_pnl = Decimal("0.0")
 
     async def get_price(self, mint: Pubkey) -> TickerData:
-        return await self.api.get_price_ticker_data(mint)
+        return await self.provider.get_price_ticker_data(mint)
 
     async def get_candles(self, mint: Pubkey) -> list[TickerData]:
-        return await self.api.get_candles(mint)
+        return await self.provider.get_candles(mint)
 
     async def get_balance(self, mint: Pubkey) -> Decimal:
         """Obtém saldo de uma moeda específica"""
-        balances = await self.api.get_account_balance()
+        balances = await self.provider.get_account_balance()
         for balance in balances:
             if balance.mint == mint:
                 return Decimal(str(balance.available))
@@ -81,7 +83,7 @@ class AsyncAccount:
         if not await self.can_buy():
             raise ValueError("Não é possível executar compra no momento")
         try:
-            order_id = await self.api.buy(
+            order_id = await self.provider.buy(
                 self.mint_in,
                 self.mint_out,
                 type_order="market",
@@ -113,7 +115,7 @@ class AsyncAccount:
             raise ValueError("Não é possível executar venda no momento")
 
         try:
-            order_id = await self.api.sell(
+            order_id = await self.provider.sell(
                 self.mint_in,
                 self.mint_out,
                 type_order="market",
