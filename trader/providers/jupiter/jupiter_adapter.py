@@ -206,26 +206,23 @@ class JupiterPrivateAPI(PrivateAPIBase):
     mas muitas funcionalidades são limitadas ou não aplicáveis.
     """
 
-    def __init__(
-        self,
-        wallet_public_key: str,
-    ):
-        """
-        Inicializa o adaptador Jupiter privado.
+    @classmethod
+    def from_env(cls):
+        private_key = os.getenv("SOLANA_PRIVATE_KEY")
+        assert private_key, "Chave privada não definida"
+        keypair = Keypair.from_base58_string(private_key)
+        return cls(keypair)
 
-        Args:
-            wallet_public_key: Chave pública da wallet Solana
-            rpc_url: URL do RPC endpoint da Solana
-        """
-        self.wallet_public_key = wallet_public_key
-        self.wallet = Pubkey.from_string(wallet_public_key)
+    def __init__(self, keypair: Keypair):
+        self.keypair = keypair
+        self.wallet = keypair.pubkey()
+        self.wallet_public_key = str(keypair.pubkey())
+
         self.rpc_url = os.getenv("HELIUS_RPC_URL")
         assert self.rpc_url, "RPC URL não definida"
         self.client = Client(self.rpc_url)
+
         self.logger = logging.getLogger(__name__)
-        private_key = os.getenv("SOLANA_PRIVATE_KEY")
-        assert private_key, "Chave privada não definida"
-        self.keypair = Keypair.from_base58_string(private_key)
 
     def get_account_balance(self) -> List[AccountBalanceData]:
         """

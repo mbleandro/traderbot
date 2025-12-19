@@ -84,22 +84,20 @@ def mock_get_token_accounts_by_owner():
 
 class TestJupiterPrivateAPI:
     def test_init(self, setenvvar):
-        api = JupiterPrivateAPI(
-            wallet_public_key="E6W4RLUxZLQN5mjVfTAv7hTrdLR5Y6nrNvFiW8p1Q1m"
-        )
-        assert api.wallet_public_key == "E6W4RLUxZLQN5mjVfTAv7hTrdLR5Y6nrNvFiW8p1Q1m"
+        keypair = Keypair()
+        api = JupiterPrivateAPI(keypair)
         assert api.rpc_url == "https://mock.com"
 
         assert isinstance(api.wallet, Pubkey)
         assert isinstance(api.client, SolanaClient)
         assert isinstance(api.keypair, Keypair)
+        assert api.keypair == keypair
+        assert api.wallet_public_key == str(keypair.pubkey())
 
     def test_get_account_balance(
         self, setenvvar, mock_get_account_info, mock_get_token_accounts_by_owner
     ):
-        api = JupiterPrivateAPI(
-            wallet_public_key="E6W4RLUxZLQN5mjVfTAv7hTrdLR5Y6nrNvFiW8p1Q1m"
-        )
+        api = JupiterPrivateAPI(Keypair())
 
         balance = api.get_account_balance()
         assert balance == [
@@ -115,9 +113,7 @@ class TestJupiterPrivateAPI:
 class TestPlaceOrder:
     @pytest.fixture(autouse=True)
     def setup_tests(self, setenvvar):
-        self.api = JupiterPrivateAPI(
-            wallet_public_key="E6W4RLUxZLQN5mjVfTAv7hTrdLR5Y6nrNvFiW8p1Q1m"
-        )
+        self.api = JupiterPrivateAPI(Keypair())
 
     @mock.patch("requests.get")
     def test_get_quote_with_route(self, mock_get):
@@ -154,7 +150,7 @@ class TestPlaceOrder:
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 
-        api = JupiterPrivateAPI(wallet_public_key=str(keypair.pubkey()))
+        api = JupiterPrivateAPI(keypair=keypair)
         api.keypair = keypair
         ixs = [
             transfer(
@@ -191,7 +187,7 @@ class TestPlaceOrder:
         keypair = Keypair()
         receiver = Pubkey.new_unique()
 
-        api = JupiterPrivateAPI(wallet_public_key=str(keypair.pubkey()))
+        api = JupiterPrivateAPI(keypair=keypair)
         api.keypair = keypair
         ixs = [
             transfer(

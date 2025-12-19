@@ -1,3 +1,4 @@
+from trader.models.bot_config import BotConfig
 from aiohttp.web import head
 import requests
 from requests.api import request
@@ -22,8 +23,8 @@ console = Console()
 
 
 class WebsocketTradingBot(BaseBot):
-    def __init__(self, api, strategy, account, notification_service):
-        super().__init__(api, strategy, account, notification_service)
+    def __init__(self, config: BotConfig):
+        super().__init__(config)
         self.total_pnl = Decimal("0.0")
         self.in_symbol, self.out_symbol = self.symbol.split("-")
         self.token = {

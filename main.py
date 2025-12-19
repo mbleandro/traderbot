@@ -1,10 +1,15 @@
-from trader.models.bot_config import MY_CONFIG
+import warnings
+from trader.trading_strategy import RandomStrategy
+from trader.models.bot_config import (
+    create_bot_config,
+    get_keypair_from_env,
+    RunningMode,
+)
 from typing import Literal
 
 import typer
 
 from trader import get_strategy_cls
-from trader.account import Account
 from trader.bot import BaseBot, WebsocketTradingBot
 from trader.notification.notification_service import (
     NullNotificationService,
@@ -13,7 +18,6 @@ from trader.notification.notification_service import (
 from trader.providers import (
     FakeJupiterPrivateAPI,
     JupiterPrivateAPI,
-    JupiterPublicAPIAdapter,
 )
 from trader.providers.jupiter.jupiter_adapter import DryJupiterPrivateAPI
 
@@ -21,7 +25,6 @@ app = typer.Typer()
 
 
 def get_api_instances(
-    wallet_key: str | None = None,
     run_mode: Literal["real", "fake", "dry"] = "real",
 ):
     """
@@ -36,11 +39,10 @@ def get_api_instances(
     if run_mode == "fake":
         return FakeJupiterPrivateAPI()
 
-    assert wallet_key is not None, "wallet_key é obrigatório para modos real e dry"
     if run_mode == "dry":
-        return DryJupiterPrivateAPI(wallet_public_key=wallet_key)
+        return DryJupiterPrivateAPI.from_env()
     if run_mode == "real":
-        return JupiterPrivateAPI(wallet_public_key=wallet_key)
+        return JupiterPrivateAPI.from_env()
 
 
 def _get_notification_svc(
@@ -56,6 +58,7 @@ def _get_notification_svc(
     return NullNotificationService()
 
 
+@warnings.deprecated("run está marcado para remocão. usar comando `start` no lugar.")
 @app.command()
 def run(
     currency: str = typer.Argument(
@@ -65,7 +68,7 @@ def run(
     interval: int = typer.Argument(..., help="Intervalo de execução em segundos"),
     api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
     wallet_key: str | None = typer.Option(
-        ..., help="Chave pública da wallet (para Jupiter)"
+        ..., help="Chave pública da wallet (para Jupiter`)"
     ),
     websocket: bool = typer.Option(
         True, help="Use WebSocket para atualização de preços"
@@ -96,57 +99,39 @@ def run(
         if not wallet_key:
             raise ValueError("Para Jupiter, wallet_key é obrigatório")
 
-    public_api = JupiterPublicAPIAdapter(use_pro=False)
-    private_api = get_api_instances(wallet_key, run_mode="real" if not dry else "dry")
-    account = Account(private_api, currency)
+    private_api = get_api_instances(run_mode="real" if not dry else "dry")
     strategy_obj = _get_strategy_obj(strategy, strategy_args)
     notification_svc = _get_notification_svc(notification_service, notification_args)
 
-    bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
+    config = create_bot_config(
+        f"run-{strategy}", currency, private_api, strategy_obj, notification_svc
+    )
+
+    bot = WebsocketTradingBot(config)
     run_bot(bot)
 
 
 @app.command()
-def run_config():
-    public_api = JupiterPublicAPIAdapter(use_pro=False)
-    config = MY_CONFIG
-    account = Account(config.provider, config.currency)
-
-    bot = WebsocketTradingBot(public_api, config.strategy, account, config.notifier)
-    run_bot(bot)
-
-
-@app.command()
-def fake(
-    currency: str,
-    strategy: str,
-    interval: int,
-    api: str = typer.Option("jupiter", help="API to use: 'jupiter'"),
-    websocket: bool = typer.Option(
-        True, help="Use WebSocket para atualização de preços"
+def start(
+    mode: RunningMode = typer.Argument(
+        RunningMode.DRY, help="Modo de execucão do bot."
     ),
-    notification_service: str = typer.Option(
-        "null", help="Serviço de notificação: 'telegram' ou 'null'"
-    ),
-    notification_args: str | None = typer.Option(
-        None, help="Argumentos do serviço de notificação"
-    ),
-    strategy_args: str | None = typer.Argument(..., help="Argumentos da estratégia"),
 ):
-    """
-    Executa o bot em modo fake (simulação com dados reais).
+    print(f"Starting bot on {str(mode)} mode")
+    if mode == RunningMode.DRY:
+        provider = DryJupiterPrivateAPI(keypair=get_keypair_from_env())
+    if mode == RunningMode.REAL:
+        provider = JupiterPrivateAPI(keypair=get_keypair_from_env())
 
-    Exemplos:
-        # Jupiter
-        uv run python main.py fake SOL-USDC dynamic_target 60 --api jupiter 'ema_period=20'
-    """
-    public_api = JupiterPublicAPIAdapter(use_pro=False)
-    private_api = get_api_instances(None, "fake")
-    account = Account(private_api, currency)
-    strategy_obj = _get_strategy_obj(strategy, strategy_args)
-    notification_svc = _get_notification_svc(notification_service, notification_args)
+    config = create_bot_config(
+        "my_config",
+        "SOL-USDC",
+        provider,
+        RandomStrategy(sell_chance=20, buy_chance=50),
+        NullNotificationService(),
+    )
 
-    bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
+    bot = WebsocketTradingBot(config)
     run_bot(bot)
 
 

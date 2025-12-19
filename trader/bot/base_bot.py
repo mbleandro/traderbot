@@ -1,3 +1,5 @@
+from trader.providers import JupiterPublicAPIAdapter
+from trader.models.bot_config import BotConfig, create_bot_config
 import logging
 from abc import ABC, abstractmethod
 
@@ -12,23 +14,37 @@ from trader.trading_strategy import TradingStrategy
 class BaseBot(ABC):
     """Classe base para bots de trading e backtesting"""
 
-    def __init__(
-        self,
+    @classmethod
+    def from_deprecated_args(
+        cls,
         api: PublicAPIBase,
         strategy: TradingStrategy,
         account: Account,
         notification_service: NotificationService,
     ):
-        self.api = api
-        self.strategy = strategy
-        self.symbol = account.symbol
-        self.is_running = False
-        self.account = account
-        self.notification_service = notification_service
+        config = create_bot_config(
+            f"run-{strategy.__class__.__name__}",
+            account.symbol,
+            account.api,
+            strategy,
+            notification_service,
+        )
+        return cls(config)
 
+    def __init__(
+        self,
+        config: BotConfig,
+    ):
         self.last_position: Position | None = None
-
+        self.is_running = False
         self.logger = logging.getLogger(self.__class__.__name__)
+
+        public_api = JupiterPublicAPIAdapter(use_pro=False)
+        self.api = public_api
+        self.strategy = config.strategy
+        self.symbol = config.currency
+        self.account = Account(config.provider, config.currency)
+        self.notification_service = config.notifier
 
     @abstractmethod
     def run(self, **kwargs):

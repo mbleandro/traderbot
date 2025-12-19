@@ -30,9 +30,6 @@ clean: ## Remove arquivos temporários e cache
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
-runfake: ## Executa o bot principal com API fake e estratégia burra
-	$(UV) run main.py fake SOL-USDC random 10 'sell_chance=20 buy_chance=40' --notification-args=null --websocket
-
 rundry: ## Executa o bot principal com dados reais, mas com a estrategia com parametros pra não comprar
 	$(UV) run --env-file .env main.py run SOL-USDC random 10 'sell_chance=20 buy_chance=40' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
 
