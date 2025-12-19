@@ -1,3 +1,4 @@
+from trader.models.bot_config import MY_CONFIG
 from typing import Literal
 
 import typer
@@ -102,6 +103,16 @@ def run(
     notification_svc = _get_notification_svc(notification_service, notification_args)
 
     bot = WebsocketTradingBot(public_api, strategy_obj, account, notification_svc)
+    run_bot(bot)
+
+
+@app.command()
+def run_config():
+    public_api = JupiterPublicAPIAdapter(use_pro=False)
+    config = MY_CONFIG
+    account = Account(config.provider, config.currency)
+
+    bot = WebsocketTradingBot(public_api, config.strategy, account, config.notifier)
     run_bot(bot)
 
 
