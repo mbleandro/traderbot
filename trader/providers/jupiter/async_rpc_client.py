@@ -81,6 +81,7 @@ class AsyncRPCClient:
         simulation = await self.client.simulate_transaction(new_tx)
         if simulation.value.err:
             raise Exception(f"Erro ao simular transação: {str(simulation.value.err)}")
+        return simulation
 
     async def send_transaction(
         self, new_tx: VersionedTransaction

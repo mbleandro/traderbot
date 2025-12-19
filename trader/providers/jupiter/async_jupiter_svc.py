@@ -26,18 +26,6 @@ from .jupiter_public_api import (
 
 
 class AsyncJupiterService:
-    """
-    Adaptador da API privada Jupiter para a interface base.
-
-    NOTA: Jupiter funciona de forma diferente do Mercado Bitcoin:
-    - Não há conceito de "contas" centralizadas
-    - Usa wallets Solana descentralizadas
-    - Não há histórico de ordens centralizado
-
-    Este adaptador simula a interface para compatibilidade,
-    mas muitas funcionalidades são limitadas ou não aplicáveis.
-    """
-
     @classmethod
     def from_env(cls):
         private_key = os.getenv("SOLANA_PRIVATE_KEY")
@@ -48,7 +36,6 @@ class AsyncJupiterService:
     def __init__(self, keypair: Keypair):
         self.keypair = keypair
         self.wallet = keypair.pubkey()
-        self.wallet_public_key = str(keypair.pubkey())
 
         self.rpc_client = AsyncRPCClient()
         self.jupiter_client = AsyncJupiterClient()
@@ -66,9 +53,7 @@ class AsyncJupiterService:
         """
         balances = []
 
-        # ============================
-        # 1 - Saldo de SOL (lamports)
-        # ============================
+        # Saldo de SOL (lamports)
         amount = await self.rpc_client.get_lamports(self.keypair.pubkey())
         decimals = SOLANA_TOKENS_DECIMALS["SOL"]
         balances.append(
@@ -169,14 +154,13 @@ class AsyncJupiterService:
     async def _get_signed_transaction(
         self, tx: VersionedTransaction
     ) -> VersionedTransaction:
-        # ---------- assinar ----------
         return await self.rpc_client.sign_transaction(tx, self.keypair)
 
     async def _send_signed_transaction(
         self, new_tx: VersionedTransaction
     ) -> SendTransactionResp:
-        # ---------- enviar ----------
         await self.rpc_client.simulate_transaction(new_tx)
+
         resp = await self.rpc_client.send_transaction(new_tx)
         signature = resp.value
 

@@ -100,7 +100,6 @@ class TestAsyncJupiterService:
         assert isinstance(api.rpc_client.client, SolanaClient)
         assert isinstance(api.keypair, Keypair)
         assert api.keypair == keypair
-        assert api.wallet_public_key == str(keypair.pubkey())
 
     async def test_get_account_balance(
         self,
