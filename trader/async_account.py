@@ -1,9 +1,12 @@
+from trader.providers import SOLANA_TOKENS
+from solders.pubkey import Pubkey
 import logging
 from datetime import datetime
 from decimal import Decimal
 
 from trader.models.order import Order
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
+from trader.providers.jupiter.jupiter_public_api import SOLANA_TOKENS_BY_MINT
 
 from .models import OrderSide, Position, PositionType
 from .providers.base_api import PrivateAPIBase
@@ -12,20 +15,22 @@ from .providers.base_api import PrivateAPIBase
 class AsyncAccount:
     """Classe responsável por gerenciar balanço, posições e execução de ordens"""
 
-    def __init__(self, api: AsyncJupiterService, symbol: str = "BTC-BRL"):
+    def __init__(self, api: AsyncJupiterService, mint_in: Pubkey, mint_out: Pubkey):
         self.api = api
-        self.symbol = symbol
-        self.coin_symbol, self.fiat_symbol = symbol.split("-")
+        self.mint_in = mint_in
+        self.mint_out = mint_out
+
+        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(mint_out)]}-{SOLANA_TOKENS_BY_MINT[str(mint_in)]}"
 
         self.current_position: Position | None = None
         self.logger = logging.getLogger("Account")
         self.total_pnl = Decimal("0.0")
 
-    async def get_balance(self, currency: str) -> Decimal:
+    async def get_balance(self, mint: Pubkey) -> Decimal:
         """Obtém saldo de uma moeda específica"""
         balances = await self.api.get_account_balance()
         for balance in balances:
-            if balance.symbol == currency:
+            if balance.mint == mint:
                 return Decimal(str(balance.available))
         return Decimal("0.0")
 
@@ -42,8 +47,8 @@ class AsyncAccount:
         ):
             return False
 
-        brl_balance = await self.get_balance(self.fiat_symbol)
-        print(self.fiat_symbol, brl_balance)
+        brl_balance = await self.get_balance(self.mint_out)
+        print(self.mint_out, brl_balance)
         return brl_balance > Decimal("0.01")  # Mínimo para operar
 
     async def can_sell(self) -> bool:
@@ -55,7 +60,7 @@ class AsyncAccount:
         ):
             return False
 
-        btc_balance = await self.get_balance(self.coin_symbol)
+        btc_balance = await self.get_balance(self.mint_in)
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
     async def place_order(
@@ -73,7 +78,8 @@ class AsyncAccount:
             raise ValueError("Não é possível executar compra no momento")
         try:
             order_id = await self.api.buy(
-                symbol=self.symbol,
+                self.mint_in,
+                self.mint_out,
                 type_order="market",
                 quantity=str(quantity),
                 price=price,
@@ -104,7 +110,8 @@ class AsyncAccount:
 
         try:
             order_id = await self.api.sell(
-                symbol=self.symbol,
+                self.mint_in,
+                self.mint_out,
                 type_order="market",
                 quantity=str(quantity),
             )

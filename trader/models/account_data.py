@@ -3,6 +3,8 @@ Dataclasses para dados de conta da API do Mercado Bitcoin.
 Estes dados requerem autenticação para serem acessados.
 """
 
+from solders.pubkey import Pubkey
+
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Dict
@@ -48,3 +50,9 @@ class AccountBalanceData:
             symbol=data["symbol"],
             total=Decimal(data["total"]),
         )
+
+
+@dataclass
+class MintBalance:
+    available: Decimal
+    mint: Pubkey

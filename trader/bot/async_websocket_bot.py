@@ -1,3 +1,4 @@
+from solders.pubkey import Pubkey
 from trader.async_account import AsyncAccount
 import logging
 from trader.models.bot_config import BotConfig
@@ -21,6 +22,7 @@ from trader.models.order import Order
 from trader.models.position import Position
 from trader.models.public_data import TickerData
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
+from trader.providers.jupiter.jupiter_public_api import SOLANA_TOKENS_BY_MINT
 
 console = Console()
 
@@ -34,22 +36,20 @@ class AsyncWebsocketTradingBot:
         self.is_running = False
         self.logger = logging.getLogger(self.__class__.__name__)
 
+        self.mint_in = Pubkey.from_string(config.mint_in)
+        self.mint_out = Pubkey.from_string(config.mint_out)
+
+        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(self.mint_out)]}-{SOLANA_TOKENS_BY_MINT[str(self.mint_in)]}"
+
         self.strategy = config.strategy
-        self.symbol = config.currency
-        self.account = AsyncAccount(config.provider, config.currency)  # type: ignore
+        self.account = AsyncAccount(
+            config.provider,  # type: ignore
+            self.mint_in,
+            self.mint_out,
+        )
         self.notification_service = config.notifier
 
         self.total_pnl = Decimal("0.0")
-        self.in_symbol, self.out_symbol = self.symbol.split("-")
-        self.token = {
-            "SOL": "So11111111111111111111111111111111111111112",
-            "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-            "USDT": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-            "BONK": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-            "JUP": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
-            "PUMP": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn",
-            "TURBO": "2Dyzu65QA9zdX1UeE7Gx71k7fiwyUK6sZdrvJ7auq5wm",
-        }[self.in_symbol]
 
         self.client = AsyncJupiterClient()
 
@@ -63,7 +63,7 @@ class AsyncWebsocketTradingBot:
         if position_signal:
             if position_signal.quantity is None:
                 position_signal.quantity = self.strategy.calculate_quantity(
-                    await self.account.get_balance("USDC"),
+                    await self.account.get_balance(self.mint_in),
                     current_ticker.last,
                 )
             order = await self.account.place_order(
@@ -82,13 +82,15 @@ class AsyncWebsocketTradingBot:
         asyncio.run(self._run())
 
     async def _run(self):
-        self.strategy.setup(await self.client.get_candles(self.token))
+        self.strategy.setup(await self.client.get_candles(str(self.mint_out)))
         should_stop = False
         self.notification_service.send_message(f"Bot iniciado para {self.symbol}")
 
         while not should_stop:
             try:
-                current_ticker = await self.client.get_price_ticker_data(self.token)
+                current_ticker = await self.client.get_price_ticker_data(
+                    str(self.mint_out)
+                )
                 log_ticker(
                     self.symbol,
                     current_ticker.last,
@@ -101,7 +103,7 @@ class AsyncWebsocketTradingBot:
                     self.notification_service.send_message(
                         f"Ordem executada: {order.side.upper()} "
                         f"{order.quantity:.8f} {self.symbol} @ "
-                        f"{self.in_symbol} {order.price:.2f}"
+                        f"{self.symbol.split('-')[1]} {order.price:.2f}"
                     )
 
                 position = self.account.get_position()

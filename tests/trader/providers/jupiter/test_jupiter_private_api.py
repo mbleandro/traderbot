@@ -23,7 +23,7 @@ from solders.solders import (
 )
 from solders.transaction import VersionedTransaction
 
-from trader.models.account_data import AccountBalanceData
+from trader.models.account_data import AccountBalanceData, MintBalance
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterService
 
 
@@ -112,11 +112,9 @@ class TestAsyncJupiterService:
 
         balance = await api.get_account_balance()
         assert balance == [
-            AccountBalanceData(
+            MintBalance(
                 available=Decimal("0.123456789"),
-                on_hold=Decimal("0"),
-                symbol="SOL",
-                total=Decimal("0.123456789"),
+                mint=Pubkey.from_string("So11111111111111111111111111111111111111112"),
             )
         ]
 

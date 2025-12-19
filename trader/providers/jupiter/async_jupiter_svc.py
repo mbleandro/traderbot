@@ -3,6 +3,8 @@ Adaptadores para a API Jupiter que implementam as interfaces base.
 Permite usar Jupiter com a mesma interface do Mercado Bitcoin.
 """
 
+from solders.pubkey import Pubkey
+
 from trader.models import JupiterQuoteResponse
 
 import logging
@@ -17,7 +19,7 @@ from solders.transaction import VersionedTransaction
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
 from trader.providers.jupiter.async_rpc_client import AsyncRPCClient
 
-from ...models.account_data import AccountBalanceData
+from ...models.account_data import AccountBalanceData, MintBalance
 from .jupiter_public_api import (
     SOLANA_TOKENS,
     SOLANA_TOKENS_BY_MINT,
@@ -41,27 +43,16 @@ class AsyncJupiterService:
         self.jupiter_client = AsyncJupiterClient()
         self.logger = logging.getLogger(__name__)
 
-    async def get_account_balance(self) -> List[AccountBalanceData]:
-        """
-        Obtém saldo da wallet Solana.
-
-        NOTA: Requer implementação de RPC calls para Solana.
-        Por enquanto, retorna lista vazia.
-
-        Returns:
-            List[AccountBalanceData]: Lista de saldos
-        """
+    async def get_account_balance(self) -> List[MintBalance]:
         balances = []
 
         # Saldo de SOL (lamports)
         amount = await self.rpc_client.get_lamports(self.keypair.pubkey())
         decimals = SOLANA_TOKENS_DECIMALS["SOL"]
         balances.append(
-            AccountBalanceData(
+            MintBalance(
                 available=amount / (10**decimals),
-                on_hold=Decimal("0"),
-                symbol="SOL",
-                total=amount / (10**decimals),
+                mint=Pubkey.from_string(SOLANA_TOKENS["SOL"]),
             )
         )
 
@@ -71,43 +62,32 @@ class AsyncJupiterService:
             if not ticker_name:
                 continue
             decimals = SOLANA_TOKENS_DECIMALS[ticker_name]
-            balances.append(
-                AccountBalanceData(
-                    available=amount / (10**decimals),
-                    on_hold=Decimal("0"),
-                    symbol=ticker_name,
-                    total=amount / (10**decimals),
-                )
-            )
+            balances.append(MintBalance(available=amount / (10**decimals), mint=mint))
         return balances
 
     async def buy(
         self,
-        symbol: str,
+        mint_in: Pubkey,
+        mint_out: Pubkey,
         type_order: str,
         quantity: str,
         price: Decimal,
     ) -> str:
-        mint_in = SOLANA_TOKENS[symbol.split("-")[0]]
-        mint_out = SOLANA_TOKENS[symbol.split("-")[1]]
-
-        mint_in, mint_out = mint_out, mint_in
-        decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[1]]
+        decimals = SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint_in)]]
         amount_in = int(Decimal(quantity) * price * (10**decimals))
-        return await self._do_swap_with_retry(mint_in, mint_out, amount_in)
+        return await self._do_swap_with_retry(str(mint_in), str(mint_out), amount_in)
 
     async def sell(
         self,
-        symbol: str,
+        mint_in: Pubkey,
+        mint_out: Pubkey,
         type_order: str,
         quantity: str,
     ) -> str:
-        mint_in = SOLANA_TOKENS[symbol.split("-")[0]]
-        mint_out = SOLANA_TOKENS[symbol.split("-")[1]]
-
-        decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[0]]
+        mint_in, mint_out = mint_out, mint_in
+        decimals = SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint_in)]]
         amount_in = int(Decimal(quantity) * (10**decimals))
-        return await self._do_swap_with_retry(mint_in, mint_out, amount_in)
+        return await self._do_swap_with_retry(str(mint_in), str(mint_out), amount_in)
 
     async def _do_swap_with_retry(self, mint_in: str, mint_out: str, amount_in: int):
         for i in range(3):
