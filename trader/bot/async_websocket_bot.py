@@ -46,16 +46,11 @@ class AsyncWebsocketTradingBot:
     async def process_market_data(self, current_ticker: TickerData):
         position_signal = self.strategy.on_market_refresh(
             current_ticker,
-            None,
+            await self.account.get_balance(self.mint_in),
             self.account.get_position(),
         )
         order = None
         if position_signal:
-            if position_signal.quantity is None:
-                position_signal.quantity = self.strategy.calculate_quantity(
-                    await self.account.get_balance(self.mint_in),
-                    current_ticker.last,
-                )
             order = await self.account.place_order(
                 current_ticker.last,
                 position_signal.side,

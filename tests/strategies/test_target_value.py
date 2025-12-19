@@ -37,7 +37,7 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("10.0001")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=10.0001), None, current_position=None
+            _ticker_data(price=10.0001), Decimal("100.00"), current_position=None
         )
         assert order_signal is None
 
@@ -51,7 +51,7 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9999), None, current_position=None
+            _ticker_data(price=9.9999), Decimal("100.00"), current_position=None
         )
         assert order_signal
         assert order_signal.side == "buy"
@@ -66,7 +66,7 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9999), None, current_position=None
+            _ticker_data(price=9.9999), Decimal("100.00"), current_position=None
         )
         assert order_signal is None
 
@@ -80,7 +80,7 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9998), None, current_position=None
+            _ticker_data(price=9.9998), Decimal("100.00"), current_position=None
         )
         assert order_signal is None
 
@@ -111,7 +111,9 @@ class TestTarketValueSell:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9999), None, current_position=self.current_position
+            _ticker_data(price=9.9999),
+            Decimal("100.00"),
+            current_position=self.current_position,
         )
         assert order_signal is None
 
@@ -124,7 +126,9 @@ class TestTarketValueSell:
             max_spread=Decimal("100.0"),
         )
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=11.9999), None, current_position=self.current_position
+            _ticker_data(price=11.9999),
+            Decimal("100.00"),
+            current_position=self.current_position,
         )
         # quando o lucro alvo é atingido, não retorna ordem de venda, apenas marca a flag
         # só vai vender quando cair no stop loss
@@ -140,14 +144,18 @@ class TestTarketValueSell:
             max_spread=Decimal("100.0"),
         )
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=11.9999), None, current_position=self.current_position
+            _ticker_data(price=11.9999),
+            Decimal("100.00"),
+            current_position=self.current_position,
         )
         assert order_signal is None
         assert strategy.target_profit_reached is True
         assert strategy.highest_price_after_target == Decimal("11.9999")
 
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=12.9999), None, current_position=self.current_position
+            _ticker_data(price=12.9999),
+            Decimal("100.00"),
+            current_position=self.current_position,
         )
         assert order_signal is None
         assert strategy.target_profit_reached is True
@@ -165,7 +173,9 @@ class TestTarketValueSell:
         strategy.highest_price_after_target = Decimal("12.5000")
 
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=10.9999), None, current_position=self.current_position
+            _ticker_data(price=10.9999),
+            Decimal("100.00"),
+            current_position=self.current_position,
         )
         # valor atual é percentualmente menor do que o valor mais alto regitrado após atingir o lucro alvo
         assert order_signal

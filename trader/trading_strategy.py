@@ -18,14 +18,14 @@ class TradingStrategy(ABC):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         pass
 
-    @abstractmethod
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
-        pass
+        quantity = (balance * Decimal("0.5")) / price
+        return quantity
 
     def setup(self, ticker_history: list[TickerData]):
         """Configura a estratégia, se necessário"""
@@ -45,14 +45,17 @@ class RandomStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         self.price_history.append(ticker.last)
         if not current_position:
             if random.randint(1, 100) <= int(self.buy_chance):
                 self.price_history = []
-                return OrderSignal(OrderSide.BUY)
+                return OrderSignal(
+                    OrderSide.BUY,
+                    quantity=self.calculate_quantity(balance, ticker.last),
+                )
         else:
             if random.randint(1, 100) <= int(self.sell_chance):
                 self.price_history = []
@@ -176,7 +179,7 @@ class TargetValueStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         current_price = ticker.buy
@@ -214,7 +217,10 @@ class TargetValueStrategy(TradingStrategy):
                 print(
                     f"Current price: {current_price} <= Target buy: {self.target_buy_price} - BUYING!"
                 )
-                return OrderSignal(OrderSide.BUY)
+                return OrderSignal(
+                    OrderSide.BUY,
+                    quantity=self.calculate_quantity(balance, ticker.last),
+                )
         else:
             # Tem posição aberta, verifica condições de venda
             entry_price = current_position.entry_order.price
@@ -387,7 +393,7 @@ class DynamicTargetStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         # Adiciona o ticker ao histórico
@@ -497,7 +503,7 @@ class WeightedMovingAverageStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         self.set_parameters(ticker.last)
@@ -513,10 +519,16 @@ class WeightedMovingAverageStrategy(TradingStrategy):
         )
         if not current_position:
             if self.buy_when_short_below and short_wma < long_wma:
-                return OrderSignal(OrderSide.BUY)
+                return OrderSignal(
+                    OrderSide.BUY,
+                    quantity=self.calculate_quantity(balance, ticker.last),
+                )
 
             if not self.buy_when_short_below and short_wma > long_wma:
-                return OrderSignal(OrderSide.BUY)
+                return OrderSignal(
+                    OrderSide.BUY,
+                    quantity=self.calculate_quantity(balance, ticker.last),
+                )
 
         return None
 
@@ -548,7 +560,7 @@ class TrailingStopLossStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         current_price = ticker.buy
@@ -558,7 +570,9 @@ class TrailingStopLossStrategy(TradingStrategy):
             # Essa estratégia não contempla compra. Deixa o composer decidir.
             # Reset do estado quando não há posição
             self.highest_price_after_target = Decimal("0")
-            return OrderSignal(OrderSide.BUY)
+            return OrderSignal(
+                OrderSide.BUY, quantity=self.calculate_quantity(balance, ticker.last)
+            )
         else:
             # Atualiza o preço mais alto após atingir o ganho alvo
             if current_price > self.highest_price_after_target:
@@ -608,7 +622,7 @@ class TargetPercentStrategy(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         current_price = ticker.buy
@@ -617,7 +631,9 @@ class TargetPercentStrategy(TradingStrategy):
         if not current_position:
             # Essa estratégia não contempla compra. Deixa o composer decidir.
             # Reset do estado quando não há posição
-            return OrderSignal(OrderSide.BUY)
+            return OrderSignal(
+                OrderSide.BUY, quantity=self.calculate_quantity(balance, ticker.last)
+            )
         else:
             # Calcula o percentual do preco atual em relacão a posicao atual
             current_percent = (
@@ -687,7 +703,7 @@ class StrategyComposer(TradingStrategy):
     def on_market_refresh(
         self,
         ticker: TickerData,
-        balance: Decimal | None,
+        balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
         signals = []
@@ -706,6 +722,9 @@ class StrategyComposer(TradingStrategy):
                 signals.append(signal)
             if self._check_signals(signals, self.buy_mode, OrderSide.BUY):
                 print(f"Strategy BUY")
-                return OrderSignal(OrderSide.BUY)
+                return OrderSignal(
+                    OrderSide.BUY,
+                    quantity=self.calculate_quantity(balance, ticker.last),
+                )
 
         return None
