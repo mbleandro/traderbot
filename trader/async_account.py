@@ -83,11 +83,11 @@ class AsyncAccount:
         if not await self.can_buy():
             raise ValueError("Não é possível executar compra no momento")
         try:
-            order_id = await self.provider.buy(
+            order_id = await self.provider.swap(
                 self.mint_in,
                 self.mint_out,
                 type_order="market",
-                quantity=str(quantity),
+                quantity=quantity,
                 price=price,
             )
             order = Order(
@@ -115,11 +115,11 @@ class AsyncAccount:
             raise ValueError("Não é possível executar venda no momento")
 
         try:
-            order_id = await self.provider.sell(
-                self.mint_in,
+            order_id = await self.provider.swap(
                 self.mint_out,
+                self.mint_in,
                 type_order="market",
-                quantity=str(quantity),
+                quantity=quantity,
             )
             order = Order(
                 order_id=order_id,

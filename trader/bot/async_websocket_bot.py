@@ -1,3 +1,4 @@
+from trader.providers import SOLANA_TOKENS
 from solders.pubkey import Pubkey
 from trader.async_account import AsyncAccount
 import logging
@@ -14,7 +15,10 @@ from trader.models.order import Order
 from trader.models.position import Position
 from trader.models.public_data import TickerData
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
-from trader.providers.jupiter.jupiter_public_api import SOLANA_TOKENS_BY_MINT
+from trader.providers.jupiter.jupiter_public_api import (
+    SOLANA_TOKENS_BY_MINT,
+    SOLANA_TOKENS_DECIMALS,
+)
 
 console = Console()
 

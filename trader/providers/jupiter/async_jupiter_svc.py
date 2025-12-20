@@ -1,8 +1,3 @@
-"""
-Adaptadores para a API Jupiter que implementam as interfaces base.
-Permite usar Jupiter com a mesma interface do Mercado Bitcoin.
-"""
-
 from datetime import datetime
 from solders.pubkey import Pubkey
 
@@ -65,9 +60,10 @@ class AsyncJupiterProvider:
         # Saldo de SOL (lamports)
         amount = await self.rpc_client.get_lamports(self.keypair.pubkey())
         decimals = SOLANA_TOKENS_DECIMALS["SOL"]
+        _amount = amount / (10**decimals)
         balances.append(
             MintBalance(
-                available=amount / (10**decimals),
+                available=_amount,
                 mint=Pubkey.from_string(SOLANA_TOKENS["SOL"]),
             )
         )
@@ -77,32 +73,24 @@ class AsyncJupiterProvider:
             ticker_name = SOLANA_TOKENS_BY_MINT.get(str(mint))
             if not ticker_name:
                 continue
-            decimals = SOLANA_TOKENS_DECIMALS[ticker_name]
-            balances.append(MintBalance(available=amount / (10**decimals), mint=mint))
+            decimals = SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint)]]
+            _amount = amount / (10**decimals)
+            balances.append(MintBalance(available=_amount, mint=mint))
         return balances
 
-    async def buy(
+    async def swap(
         self,
         mint_in: Pubkey,
         mint_out: Pubkey,
         type_order: str,
-        quantity: str,
-        price: Decimal,
+        quantity: Decimal,
+        price: Decimal | None = None,
     ) -> str:
-        decimals = SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint_in)]]
-        amount_in = int(Decimal(quantity) * price * (10**decimals))
-        return await self._do_swap_with_retry(str(mint_in), str(mint_out), amount_in)
-
-    async def sell(
-        self,
-        mint_in: Pubkey,
-        mint_out: Pubkey,
-        type_order: str,
-        quantity: str,
-    ) -> str:
-        mint_in, mint_out = mint_out, mint_in
-        decimals = SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint_in)]]
-        amount_in = int(Decimal(quantity) * (10**decimals))
+        amount_in = quantity * price if price else quantity
+        amount_in = amount_in * (
+            10 ** SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint_in)]]
+        )
+        amount_in = int(amount_in)
         return await self._do_swap_with_retry(str(mint_in), str(mint_out), amount_in)
 
     async def _do_swap_with_retry(self, mint_in: str, mint_out: str, amount_in: int):

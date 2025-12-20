@@ -39,7 +39,7 @@ class RandomStrategy(TradingStrategy):
         self.price_history: list[Decimal] = []
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
-        quantity = (balance * Decimal("0.5")) / price
+        quantity = (balance * Decimal("1.0")) / price
         return quantity
 
     def on_market_refresh(
