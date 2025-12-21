@@ -1,4 +1,4 @@
-from trader.providers import SOLANA_TOKENS
+from trader.models import SOLANA_MINTS
 from solders.pubkey import Pubkey
 from trader.async_account import AsyncAccount
 import logging
@@ -7,18 +7,12 @@ import asyncio
 import traceback
 from decimal import Decimal
 
-import websockets
 from rich.console import Console
 from rich.text import Text
 
 from trader.models.order import Order
 from trader.models.position import Position
 from trader.models.public_data import TickerData
-from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
-from trader.providers.jupiter.jupiter_public_api import (
-    SOLANA_TOKENS_BY_MINT,
-    SOLANA_TOKENS_DECIMALS,
-)
 
 console = Console()
 
@@ -35,8 +29,9 @@ class AsyncWebsocketTradingBot:
         self.input_mint = Pubkey.from_string(config.input_mint)
         self.output_mint = Pubkey.from_string(config.output_mint)
 
-        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(self.output_mint)]}-{SOLANA_TOKENS_BY_MINT[str(self.input_mint)]}"
-
+        self.symbol = (
+            f"{SOLANA_MINTS[self.output_mint]}-{SOLANA_MINTS[self.input_mint]}"
+        )
         self.strategy = config.strategy
         self.account = AsyncAccount(
             config.provider,  # type: ignore

@@ -1,7 +1,7 @@
 from datetime import datetime
 from solders.pubkey import Pubkey
 
-from trader.models import JupiterQuoteResponse, TickerData
+from trader.models import JupiterQuoteResponse, TickerData, SOLANA_MINTS
 
 import logging
 import os
@@ -16,11 +16,6 @@ from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient, In
 from trader.providers.jupiter.async_rpc_client import AsyncRPCClient
 
 from ...models.account_data import MintBalance
-from .jupiter_public_api import (
-    SOLANA_TOKENS,
-    SOLANA_TOKENS_BY_MINT,
-    SOLANA_TOKENS_DECIMALS,
-)
 
 
 class AsyncJupiterProvider:
@@ -60,22 +55,21 @@ class AsyncJupiterProvider:
 
         # Saldo de SOL (lamports)
         amount = await self.rpc_client.get_lamports(self.keypair.pubkey())
-        decimals = SOLANA_TOKENS_DECIMALS["SOL"]
-        _amount = amount / (10**decimals)
+        solana_mint = SOLANA_MINTS.get_by_symbol("SOL")
+        _amount = amount / (10**solana_mint.decimals)
         balances.append(
             MintBalance(
                 available=_amount,
-                mint=Pubkey.from_string(SOLANA_TOKENS["SOL"]),
+                mint=solana_mint.pubkey,
             )
         )
 
         mint_balances = await self.rpc_client.get_account_balance(self.keypair.pubkey())
         for mint, amount in mint_balances.items():
-            ticker_name = SOLANA_TOKENS_BY_MINT.get(str(mint))
-            if not ticker_name:
+            mint_info = SOLANA_MINTS.get(mint)
+            if not mint_info:
                 continue
-            decimals = SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint)]]
-            _amount = amount / (10**decimals)
+            _amount = amount / (10**mint_info.decimals)
             balances.append(MintBalance(available=_amount, mint=mint))
         return balances
 
@@ -88,9 +82,8 @@ class AsyncJupiterProvider:
         price: Decimal | None = None,
     ) -> str:
         amount_in = quantity * price if price else quantity
-        amount_in = amount_in * (
-            10 ** SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(input_mint)]]
-        )
+        input_mint_info = SOLANA_MINTS[input_mint]
+        amount_in = amount_in * (10**input_mint_info.decimals)
         amount_in = int(amount_in)
         return await self._do_swap_with_retry(
             str(input_mint), str(output_mint), amount_in

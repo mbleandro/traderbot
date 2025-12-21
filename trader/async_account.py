@@ -3,11 +3,9 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 
-from trader.models.order import Order
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
-from trader.providers.jupiter.jupiter_public_api import SOLANA_TOKENS_BY_MINT
 
-from .models import OrderSide, Position, PositionType, TickerData
+from .models import OrderSide, Position, PositionType, TickerData, Order, SOLANA_MINTS
 
 
 class AsyncAccount:
@@ -20,7 +18,7 @@ class AsyncAccount:
         self.input_mint = input_mint
         self.output_mint = output_mint
 
-        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(output_mint)]}-{SOLANA_TOKENS_BY_MINT[str(input_mint)]}"
+        self.symbol = f"{SOLANA_MINTS[output_mint]}-{SOLANA_MINTS[input_mint]}"
 
         self.current_position: Position | None = None
         self.logger = logging.getLogger("Account")
