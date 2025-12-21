@@ -1,3 +1,4 @@
+from functools import cached_property
 from solders.pubkey import Pubkey
 import logging
 from datetime import datetime
@@ -17,8 +18,6 @@ class AsyncAccount:
         self.provider = provider
         self.input_mint = input_mint
         self.output_mint = output_mint
-
-        self.symbol = f"{SOLANA_MINTS[output_mint]}-{SOLANA_MINTS[input_mint]}"
 
         self.current_position: Position | None = None
         self.logger = logging.getLogger("Account")
@@ -90,7 +89,8 @@ class AsyncAccount:
             )
             order = Order(
                 order_id=order_id,
-                symbol=self.symbol,
+                input_mint=str(self.input_mint),
+                output_mint=str(self.output_mint),
                 quantity=quantity * Decimal("0.997"),
                 price=price,
                 side=OrderSide.BUY,
@@ -121,7 +121,8 @@ class AsyncAccount:
             )
             order = Order(
                 order_id=order_id,
-                symbol=self.symbol,
+                input_mint=str(self.input_mint),
+                output_mint=str(self.output_mint),
                 quantity=quantity * Decimal("0.997"),
                 price=price,
                 side=OrderSide.SELL,

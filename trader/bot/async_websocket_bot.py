@@ -1,3 +1,4 @@
+from functools import cached_property
 from trader.models import SOLANA_MINTS
 from solders.pubkey import Pubkey
 from trader.async_account import AsyncAccount
@@ -29,9 +30,6 @@ class AsyncWebsocketTradingBot:
         self.input_mint = Pubkey.from_string(config.input_mint)
         self.output_mint = Pubkey.from_string(config.output_mint)
 
-        self.symbol = (
-            f"{SOLANA_MINTS[self.output_mint]}-{SOLANA_MINTS[self.input_mint]}"
-        )
         self.strategy = config.strategy
         self.account = AsyncAccount(
             config.provider,  # type: ignore
@@ -64,6 +62,10 @@ class AsyncWebsocketTradingBot:
     def run(self, **kwargs):
         self.is_running = True
         asyncio.run(self._run())
+
+    @cached_property
+    def symbol(self):
+        return f"{SOLANA_MINTS[self.output_mint].symbol}-{SOLANA_MINTS[self.input_mint].symbol}"
 
     async def _run(self):
         self.strategy.setup(await self.account.get_candles(self.output_mint))

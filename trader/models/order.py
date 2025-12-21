@@ -18,7 +18,8 @@ class OrderSignal:
 @dataclass
 class Order:
     order_id: str
-    symbol: str
+    input_mint: str
+    output_mint: str
     quantity: Decimal
     price: Decimal
     side: OrderSide
@@ -28,7 +29,8 @@ class Order:
         return (
             value
             and self.order_id == value.order_id
-            and self.symbol == value.symbol
+            and self.input_mint == value.input_mint
+            and self.output_mint == value.output_mint
             and self.quantity == value.quantity
             and self.price == value.price
             and self.side == value.side

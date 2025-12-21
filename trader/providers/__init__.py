@@ -2,23 +2,22 @@
 Módulo de interfaces da API do Mercado Bitcoin e Jupiter.
 """
 
-from .base_api import PrivateAPIBase, PublicAPIBase
-from .jupiter.jupiter_adapter import (
-    FakeJupiterPrivateAPI,
-    JupiterPrivateAPI,
-    JupiterPublicAPIAdapter,
+from .jupiter.async_jupiter_svc import AsyncJupiterProvider
+from .jupiter.jupiter_data import (
+    JupiterPriceData,
+    JupiterQuoteResponse,
+    JupiterRoutePlan,
+    JupiterSwapInfo,
+    JupiterSwapResponse,
+    JupiterTokenInfo,
 )
-from .jupiter.jupiter_public_api import SOLANA_TOKENS, JupiterPublicAPI
 
 __all__ = [
-    # Base interfaces
-    "PublicAPIBase",
-    "PrivateAPIBase",
-    # Jupiter (APIs nativas)
-    "JupiterPublicAPI",
-    "JupiterPrivateAPI",
-    "SOLANA_TOKENS",
-    # Jupiter (Adaptadores compatíveis)
-    "JupiterPublicAPIAdapter",
-    "FakeJupiterPrivateAPI",
+    "AsyncJupiterProvider",
+    "JupiterPriceData",
+    "JupiterQuoteResponse",
+    "JupiterRoutePlan",
+    "JupiterSwapInfo",
+    "JupiterSwapResponse",
+    "JupiterTokenInfo",
 ]

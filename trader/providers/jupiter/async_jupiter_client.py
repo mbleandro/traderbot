@@ -65,7 +65,7 @@ class AsyncJupiterClient:
             params["maxAccounts"] = str(max_accounts)
 
         url = "https://lite-api.jup.ag/swap/v1/quote"
-        response = await self.client.request("GET", url, params=params)
+        response = await self.client.get(url, params=params)
         try:
             response.raise_for_status()
             response_json = response.json()

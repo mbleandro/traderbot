@@ -31,10 +31,10 @@ clean: ## Remove arquivos temporários e cache
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 
 rundry: ## Executa o bot principal com dados reais, mas com a estrategia com parametros pra não comprar
-	$(UV) run --env-file .env main.py run SOL-USDC random 10 'sell_chance=20 buy_chance=40' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
+	$(UV) run --env-file .env main.py run dry SOL-USDC random 'sell_chance=20 buy_chance=40'
 
 rundrycomposer_sol:
-	$(UV) run --env-file .env main.py run SOL-USDC composer 10 'buy_mode=all sell_mode=any' --websocket --dry --wallet-key=$(SOLANA_PUBLIC_KEY) --notification-args=1
+	$(UV) run --env-file .env main.py run dry SOL-USDC composer 'buy_mode=all sell_mode=any'
 
 startdry:
 	$(UV) run --env-file .env main.py start dry

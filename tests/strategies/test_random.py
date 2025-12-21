@@ -44,7 +44,8 @@ def test_random_strategy_sell():
             type=PositionType.LONG,
             entry_order=Order(
                 order_id="1",
-                symbol="SOL-USDC",
+                input_mint="Sol1111",
+                output_mint="Efwr4t",
                 quantity=Decimal("10"),
                 price=Decimal("10.0001"),
                 side=OrderSide.BUY,

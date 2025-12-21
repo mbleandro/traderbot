@@ -1,5 +1,5 @@
+from trader.providers import JupiterQuoteResponse, JupiterRoutePlan, JupiterSwapInfo
 import httpx
-from trader.models import JupiterRoutePlan, JupiterSwapInfo, JupiterQuoteResponse
 import os
 from decimal import Decimal
 from types import SimpleNamespace
@@ -23,7 +23,7 @@ from solders.solders import (
 )
 from solders.transaction import VersionedTransaction
 
-from trader.models.account_data import AccountBalanceData, MintBalance
+from trader.models.account_data import MintBalance
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 
 

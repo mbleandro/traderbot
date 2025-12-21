@@ -1,10 +1,9 @@
 from datetime import datetime
 from solders.pubkey import Pubkey
 
-from trader.models import JupiterQuoteResponse, TickerData, SOLANA_MINTS
+from trader.models import TickerData, SOLANA_MINTS
 
 import logging
-import os
 from decimal import Decimal
 from typing import List
 
@@ -12,10 +11,10 @@ from solders.keypair import Keypair
 from solders.solders import SendTransactionResp
 from solders.transaction import VersionedTransaction
 
+from trader.models.account_data import MintBalance
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient, Interval
 from trader.providers.jupiter.async_rpc_client import AsyncRPCClient
-
-from ...models.account_data import MintBalance
+from trader.providers.jupiter.jupiter_data import JupiterQuoteResponse
 
 
 class AsyncJupiterProvider:

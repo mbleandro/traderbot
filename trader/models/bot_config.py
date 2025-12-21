@@ -9,7 +9,6 @@ from trader.notification.notification_service import (
 )
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 from trader.trading_strategy import TradingStrategy
-from trader.providers.base_api import PrivateAPIBase
 from solders.keypair import Keypair
 
 
@@ -28,7 +27,7 @@ class BotConfig:
     output_mint: str  # a moeda que eu vou comprar
     # mode: RunningMode
     wallet: Keypair
-    provider: PrivateAPIBase | AsyncJupiterProvider
+    provider: AsyncJupiterProvider
     strategy: TradingStrategy
     notifier: NotificationService
 

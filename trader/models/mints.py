@@ -31,7 +31,7 @@ class Mint:
         return Decimal(raw_amount) / scale
 
     def __repr__(self) -> str:
-        return f"Mint(symbol={self.symbol}, decimals={self.decimals})"
+        return f"{self.symbol} ({self.mint[:6]}..)"
 
 
 class SolanaMints(dict[str, Mint]):

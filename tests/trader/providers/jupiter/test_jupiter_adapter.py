@@ -1,3 +1,6 @@
+from solders.keypair import Keypair
+from trader.models import SOLANA_MINTS
+from trader.providers import AsyncJupiterProvider
 import re
 from decimal import Decimal
 from unittest import mock
@@ -5,44 +8,13 @@ from unittest import mock
 import pytest
 
 from trader.models.public_data import TickerData
-from trader.providers.jupiter.jupiter_adapter import JupiterPublicAPIAdapter
+from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
 from trader.providers.jupiter.jupiter_data import JupiterQuoteResponse
-from trader.providers.jupiter.jupiter_public_api import JupiterPublicAPI
-
-
-class TestParseSymbol:
-    def test_success(self):
-        adapter = JupiterPublicAPIAdapter()
-        symbol = "BONK-USDC"
-        parsed = adapter._parse_symbol(symbol)
-        assert parsed == (
-            "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
-            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        )
-
-    def test_invalid_format(self):
-        adapter = JupiterPublicAPIAdapter()
-        symbol = "BTCUSD"
-        with pytest.raises(
-            ValueError, match="Símbolo inválido: BTCUSD. Use formato 'TOKEN1-TOKEN2'"
-        ):
-            adapter._parse_symbol(symbol)
-
-    def test_unknown_token(self):
-        adapter = JupiterPublicAPIAdapter()
-        symbol = "UNKNOWN-USDC"
-        with pytest.raises(
-            ValueError,
-            match=re.escape(
-                "Token não encontrado: UNKNOWN. Tokens disponíveis: ['SOL', 'USDC', 'USDT', 'BONK', 'JUP', 'PUMP', 'TURBO']"
-            ),
-        ):
-            adapter._parse_symbol(symbol)
 
 
 class TestGetTicker:
     @staticmethod
-    def fake_get_quote(*args, **kwargs) -> JupiterQuoteResponse:
+    async def fake_get_quote(*args, **kwargs) -> JupiterQuoteResponse:
         data = {
             "inputMint": "So11111111111111111111111111111111111111112",
             "inAmount": "1000000000",
@@ -73,11 +45,12 @@ class TestGetTicker:
         }
         return JupiterQuoteResponse.from_dict(data)
 
-    @mock.patch.object(JupiterPublicAPI, "get_quote", return_value=fake_get_quote())
-    def test_get_ticker(self, mock_get_quote):
-        adapter = JupiterPublicAPIAdapter()
-        symbol = "SOL-USDC"
-        ticker = adapter.get_ticker(symbol)
+    @mock.patch.object(AsyncJupiterClient, "get_price", return_value=Decimal("2"))
+    async def test_get_ticker(self, mock_get_quote):
+        adapter = AsyncJupiterProvider(Keypair(), rpc_client=object)
+        ticker = await adapter.get_price_ticker_data(
+            SOLANA_MINTS.get_by_symbol("SOL").pubkey
+        )
         buy_price = Decimal("2")
         assert ticker == TickerData(
             buy=buy_price,
@@ -86,24 +59,11 @@ class TestGetTicker:
             last=buy_price,
             low=buy_price,
             open=buy_price,
-            pair=symbol,
-            sell=Decimal("0.005"),
+            pair="ignored",
+            sell=buy_price,
             vol=Decimal("0"),
-            spread=Decimal("-99.7500"),
+            spread=None,
         )
         mock_get_quote.assert_has_calls(
-            [
-                mock.call(
-                    input_mint="So11111111111111111111111111111111111111112",
-                    output_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-                    amount=1000000000,
-                    slippage_bps=50,
-                ),
-                mock.call(
-                    input_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-                    output_mint="So11111111111111111111111111111111111111112",
-                    amount=1000000000,
-                    slippage_bps=50,
-                ),
-            ]
+            [mock.call("So11111111111111111111111111111111111111112")]
         )
