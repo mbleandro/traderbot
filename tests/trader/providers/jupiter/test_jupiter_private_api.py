@@ -94,12 +94,11 @@ class TestAsyncJupiterProvider:
     def test_init(self, setenvvar):
         keypair = Keypair()
         api = AsyncJupiterProvider(keypair)
-        assert api.rpc_client.rpc_url == "https://mock.com"
 
-        assert isinstance(api.wallet, Pubkey)
-        assert isinstance(api.rpc_client.client, SolanaClient)
         assert isinstance(api.keypair, Keypair)
         assert api.keypair == keypair
+
+        assert isinstance(api.rpc_client.client, SolanaClient)
 
     async def test_get_account_balance(
         self,
@@ -158,8 +157,8 @@ class TestPlaceOrder:
 
         mock_get.return_value = mock_response
         quote = await self.api._get_quote_with_route(
-            mint_in="So11111111111111111111111111111111111111112",
-            mint_out="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            input_mint="So11111111111111111111111111111111111111112",
+            output_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
             amount_in=1000000000,
             slippage_bps=50,
         )
@@ -213,8 +212,8 @@ class TestPlaceOrder:
         mock_get.return_value = mock_response
         with pytest.raises(Exception, match="Nenhuma rota encontrada!"):
             await self.api._get_quote_with_route(
-                mint_in="So11111111111111111111111111111111111111112",
-                mint_out="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                input_mint="So11111111111111111111111111111111111111112",
+                output_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
                 amount_in=1000000000,
                 slippage_bps=50,
             )

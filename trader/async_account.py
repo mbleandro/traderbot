@@ -14,13 +14,13 @@ class AsyncAccount:
     """Classe responsável por gerenciar balanço, posições e execução de ordens"""
 
     def __init__(
-        self, provider: AsyncJupiterProvider, mint_in: Pubkey, mint_out: Pubkey
+        self, provider: AsyncJupiterProvider, input_mint: Pubkey, output_mint: Pubkey
     ):
         self.provider = provider
-        self.mint_in = mint_in
-        self.mint_out = mint_out
+        self.input_mint = input_mint
+        self.output_mint = output_mint
 
-        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(mint_out)]}-{SOLANA_TOKENS_BY_MINT[str(mint_in)]}"
+        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(output_mint)]}-{SOLANA_TOKENS_BY_MINT[str(input_mint)]}"
 
         self.current_position: Position | None = None
         self.logger = logging.getLogger("Account")
@@ -53,8 +53,8 @@ class AsyncAccount:
         ):
             return False
 
-        brl_balance = await self.get_balance(self.mint_out)
-        print(self.mint_out, brl_balance)
+        brl_balance = await self.get_balance(self.input_mint)
+        print(self.input_mint, brl_balance)
         return brl_balance > Decimal("0.01")  # Mínimo para operar
 
     async def can_sell(self) -> bool:
@@ -66,7 +66,7 @@ class AsyncAccount:
         ):
             return False
 
-        btc_balance = await self.get_balance(self.mint_in)
+        btc_balance = await self.get_balance(self.output_mint)
         return btc_balance > Decimal("0.00001")  # Mínimo para vender
 
     async def place_order(
@@ -84,8 +84,8 @@ class AsyncAccount:
             raise ValueError("Não é possível executar compra no momento")
         try:
             order_id = await self.provider.swap(
-                self.mint_in,
-                self.mint_out,
+                self.input_mint,
+                self.output_mint,
                 type_order="market",
                 quantity=quantity,
                 price=price,
@@ -116,8 +116,8 @@ class AsyncAccount:
 
         try:
             order_id = await self.provider.swap(
-                self.mint_out,
-                self.mint_in,
+                self.output_mint,
+                self.input_mint,
                 type_order="market",
                 quantity=quantity,
             )

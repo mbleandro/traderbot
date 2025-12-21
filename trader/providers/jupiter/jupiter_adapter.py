@@ -274,12 +274,12 @@ class JupiterPrivateAPI(PrivateAPIBase):
                     continue
 
                 # Para converter o token corretamente, buscamos dados do mint
-                mint_info = self.client.get_account_info(mint)
+                input_mintfo = self.client.get_account_info(mint)
 
-                if not mint_info.value:
+                if not input_mintfo.value:
                     continue
 
-                mint_raw = bytes(mint_info.value.data)
+                mint_raw = bytes(input_mintfo.value.data)
                 decimals = mint_raw[44]
                 real_amount = amount / (10**decimals)
                 if real_amount > 0:
@@ -301,13 +301,13 @@ class JupiterPrivateAPI(PrivateAPIBase):
         quantity: str,
         price: Decimal,
     ) -> str:
-        mint_in = SOLANA_TOKENS[symbol.split("-")[0]]
-        mint_out = SOLANA_TOKENS[symbol.split("-")[1]]
+        input_mint = SOLANA_TOKENS[symbol.split("-")[0]]
+        output_mint = SOLANA_TOKENS[symbol.split("-")[1]]
 
-        mint_in, mint_out = mint_out, mint_in
+        input_mint, output_mint = output_mint, input_mint
         decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[1]]
         amount_in = int(Decimal(quantity) * price * (10**decimals))
-        return self._do_swap_with_retry(mint_in, mint_out, amount_in)
+        return self._do_swap_with_retry(input_mint, output_mint, amount_in)
 
     def sell(
         self,
@@ -315,17 +315,19 @@ class JupiterPrivateAPI(PrivateAPIBase):
         type_order: str,
         quantity: str,
     ) -> str:
-        mint_in = SOLANA_TOKENS[symbol.split("-")[0]]
-        mint_out = SOLANA_TOKENS[symbol.split("-")[1]]
+        input_mint = SOLANA_TOKENS[symbol.split("-")[0]]
+        output_mint = SOLANA_TOKENS[symbol.split("-")[1]]
 
         decimals = SOLANA_TOKENS_DECIMALS[symbol.split("-")[0]]
         amount_in = int(Decimal(quantity) * (10**decimals))
-        return self._do_swap_with_retry(mint_in, mint_out, amount_in)
+        return self._do_swap_with_retry(input_mint, output_mint, amount_in)
 
-    def _do_swap_with_retry(self, mint_in: str, mint_out: str, amount_in: int):
+    def _do_swap_with_retry(self, input_mint: str, output_mint: str, amount_in: int):
         for i in range(3):
             try:
-                return self._do_swap(mint_in, mint_out, amount_in, [50, 50, 75][i])
+                return self._do_swap(
+                    input_mint, output_mint, amount_in, [50, 50, 75][i]
+                )
             except Exception as e:
                 if i == 2:
                     raise e
@@ -360,8 +362,8 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
     def _get_quote_with_route(
         self,
-        mint_in: str,
-        mint_out: str,
+        input_mint: str,
+        output_mint: str,
         amount_in: int,
         slippage_bps: int = 50,
     ):
@@ -370,8 +372,8 @@ class JupiterPrivateAPI(PrivateAPIBase):
             response = requests.get(
                 "https://lite-api.jup.ag/swap/v1/quote",
                 params={
-                    "inputMint": mint_in,
-                    "outputMint": mint_out,
+                    "inputMint": input_mint,
+                    "outputMint": output_mint,
                     "amount": amount_in,
                     "slippageBps": slippage_bps,
                 },
@@ -462,12 +464,14 @@ class JupiterPrivateAPI(PrivateAPIBase):
 
     def _do_swap(
         self,
-        mint_in: str,
-        mint_out: str,
+        input_mint: str,
+        output_mint: str,
         amount_in: int,
         slippage_bps: int = 50,
     ):
-        quote = self._get_quote_with_route(mint_in, mint_out, amount_in, slippage_bps)
+        quote = self._get_quote_with_route(
+            input_mint, output_mint, amount_in, slippage_bps
+        )
         tx = self._get_swap_transaction(quote)
         new_tx = self._get_signed_transaction(tx)
         resp = self._send_transaction_and_wait_for_confirmation(new_tx)

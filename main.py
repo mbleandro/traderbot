@@ -1,7 +1,7 @@
 from trader.bot.async_websocket_bot import AsyncWebsocketTradingBot
 import warnings
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
-from trader.trading_strategy import RandomStrategy
+from trader.trading_strategy import RandomStrategy, StrategyComposer
 from trader.models.bot_config import (
     create_bot_config,
     get_keypair_from_env,
@@ -116,18 +116,21 @@ def run(
 @app.command()
 def start(
     mode: RunningMode = typer.Argument(
-        RunningMode.DRY, help="Modo de execucão do bot."
+        RunningMode.REAL, help="Modo de execucão do bot."
     ),
+    symbol: str = typer.Argument("SOL-USDC", help="The trading symbol"),
 ):
     print(f"Starting bot on {str(mode)} mode")
-    if mode == RunningMode.DRY:
-        provider = AsyncJupiterProvider(keypair=get_keypair_from_env())
+    provider = AsyncJupiterProvider(
+        keypair=get_keypair_from_env(), is_dryrun=(mode == RunningMode.DRY)
+    )
 
     config = create_bot_config(
         "my_config",
-        "SOL-USDC",
+        symbol,
         provider,
-        RandomStrategy(sell_chance=20, buy_chance=50),
+        # RandomStrategy(sell_chance=20, buy_chance=50),
+        StrategyComposer(sell_mode="any", buy_mode="all"),
         NullNotificationService(),
     )
 

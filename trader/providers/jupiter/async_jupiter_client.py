@@ -27,17 +27,20 @@ class Interval(StrEnum):
 
 
 class AsyncJupiterClient:
-    def __init__(self):
+    def __init__(self, client=None, websocket=None):
         self.logger = logging.getLogger(__name__)
 
-        self.websocket = None
-        self.client = httpx.AsyncClient()
-        # Headers padrão para requisições públicas
-        self.client.headers.update(
-            {
-                "Content-Type": "application/json",
-            }
-        )
+        self.websocket = websocket
+        if client:
+            self.client = client
+        else:
+            self.client = httpx.AsyncClient()
+            # Headers padrão para requisições públicas
+            self.client.headers.update(
+                {
+                    "Content-Type": "application/json",
+                }
+            )
 
     async def get_quote(
         self,
@@ -68,6 +71,8 @@ class AsyncJupiterClient:
             response_json = response.json()
             return JupiterQuoteResponse.from_dict(response_json)
         except Exception as ex:
+            if response.status_code == 429:
+                await asyncio.sleep(1.5)
             ex.add_note(f"URL: {url}")
             if response:
                 ex.add_note(f"Status Code: {response.status_code}")
@@ -124,11 +129,14 @@ class AsyncJupiterClient:
             if not self.websocket:
                 self.websocket = await self._connect_price_ws(mint)
             return await self._get_price(self.websocket)
-        except Exception as ex:
-            self.logger.error(f"Erro ao conectar WebSocket: {str(ex)}", exc_info=ex)
+        except websockets.exceptions.ConnectionClosedError as ex:
+            self.logger.info(f"INFO: WebSocket Closed: {str(ex)}")
             await asyncio.sleep(2)  # Espera antes de tentar reconectar
             self.websocket = None
             return await self.get_price(mint)
+        except Exception as ex:
+            self.logger.error(f"Erro ao conectar WebSocket: {str(ex)}", exc_info=ex)
+            raise ex
 
     async def _get_price(self, ws: ClientConnection) -> Decimal:
         msg = await ws.recv()

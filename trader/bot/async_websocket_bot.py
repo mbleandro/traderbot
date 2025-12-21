@@ -32,16 +32,16 @@ class AsyncWebsocketTradingBot:
         self.is_running = False
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        self.mint_in = Pubkey.from_string(config.mint_in)
-        self.mint_out = Pubkey.from_string(config.mint_out)
+        self.input_mint = Pubkey.from_string(config.input_mint)
+        self.output_mint = Pubkey.from_string(config.output_mint)
 
-        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(self.mint_out)]}-{SOLANA_TOKENS_BY_MINT[str(self.mint_in)]}"
+        self.symbol = f"{SOLANA_TOKENS_BY_MINT[str(self.output_mint)]}-{SOLANA_TOKENS_BY_MINT[str(self.input_mint)]}"
 
         self.strategy = config.strategy
         self.account = AsyncAccount(
             config.provider,  # type: ignore
-            self.mint_in,
-            self.mint_out,
+            self.input_mint,
+            self.output_mint,
         )
         self.notification_service = config.notifier
 
@@ -50,7 +50,7 @@ class AsyncWebsocketTradingBot:
     async def process_market_data(self, current_ticker: TickerData):
         position_signal = self.strategy.on_market_refresh(
             current_ticker,
-            await self.account.get_balance(self.mint_in),
+            await self.account.get_balance(self.input_mint),
             self.account.get_position(),
         )
         order = None
@@ -71,13 +71,13 @@ class AsyncWebsocketTradingBot:
         asyncio.run(self._run())
 
     async def _run(self):
-        self.strategy.setup(await self.account.get_candles(self.mint_out))
+        self.strategy.setup(await self.account.get_candles(self.output_mint))
         should_stop = False
         self.notification_service.send_message(f"Bot iniciado para {self.symbol}")
 
         while not should_stop:
             try:
-                current_ticker = await self.account.get_price(self.mint_out)
+                current_ticker = await self.account.get_price(self.output_mint)
                 log_ticker(
                     self.symbol,
                     current_ticker.last,
@@ -96,13 +96,6 @@ class AsyncWebsocketTradingBot:
                 position = self.account.get_position()
                 if position:
                     log_position(position, current_ticker.last)
-
-            except websockets.exceptions.ConnectionClosedError:
-                self.logger.warning("Conexão WebSocket perdida. Reconnectando...")
-                self.notification_service.send_message(
-                    "Conexão WebSocket perdida. Reconnectando..."
-                )
-                break  # Sai do loop interno e volta para tentar reconectar
 
             except KeyboardInterrupt:
                 self.logger.warning("Bot interrompido pelo usuário")

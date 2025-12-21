@@ -6,6 +6,7 @@ from enum import StrEnum, auto
 from trader.notification.notification_service import (
     NotificationService,
 )
+from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 from trader.providers.jupiter.jupiter_public_api import (
     SOLANA_TOKENS_BY_MINT,
     SOLANA_TOKENS,
@@ -26,18 +27,18 @@ class BotConfig:
     id: str
     name: str  # unique friendly name
 
-    mint_in: str
-    mint_out: str
+    input_mint: str  # a moeda que eu tenho
+    output_mint: str  # a moeda que eu vou comprar
     # mode: RunningMode
     wallet: Keypair
-    provider: PrivateAPIBase
+    provider: PrivateAPIBase | AsyncJupiterProvider
     strategy: TradingStrategy
     notifier: NotificationService
 
     @property
     def currency(self):
-        _in = SOLANA_TOKENS_BY_MINT[self.mint_in]
-        _out = SOLANA_TOKENS_BY_MINT[self.mint_out]
+        _in = SOLANA_TOKENS_BY_MINT[self.input_mint]
+        _out = SOLANA_TOKENS_BY_MINT[self.output_mint]
         return f"{_out}-{_in}"
 
 
@@ -48,8 +49,8 @@ def create_bot_config(name: str, symbol: str, provider, strategy, notifier):
     return BotConfig(
         id=uuid.uuid4().hex,
         name=name,
-        mint_in=SOLANA_TOKENS[_in],
-        mint_out=SOLANA_TOKENS[_out],
+        input_mint=SOLANA_TOKENS[_in],
+        output_mint=SOLANA_TOKENS[_out],
         wallet=keypair,
         provider=provider,
         strategy=strategy,

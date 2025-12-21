@@ -584,7 +584,7 @@ class TrailingStopLossStrategy(TradingStrategy):
                 / self.highest_price_after_target
             ) * Decimal("100")
             print(
-                f"StopLossStrategy: drop_percent={drop_percent:.2f}% from highest_price={self.highest_price_after_target:.9f} to current_price={current_price:.9f}"
+                f"TrailingStopLossStrategy: drop_percent={drop_percent:.2f}% from highest_price={self.highest_price_after_target:.9f} to current_price={current_price:.9f}"
             )
             # Ativa stop loss se cair o percentual configurado
             if drop_percent >= self.stop_loss_percent:
@@ -640,7 +640,7 @@ class TargetPercentStrategy(TradingStrategy):
                 (current_price - current_position.entry_order.price) / current_price
             ) * Decimal("100")
             print(
-                f"StopLossStrategy: drop_percent={current_percent:.2f}% from entry_order.price={current_position.entry_order.price:.9f} to current_price={current_price:.9f}"
+                f"TargetPercentStrategy: drop_percent={current_percent:.2f}% from entry_order.price={current_position.entry_order.price:.9f} to current_price={current_price:.9f}"
             )
             # Ativa stop loss se cair o percentual configurado
             if current_percent >= self.target_percent:
@@ -666,22 +666,15 @@ class StrategyComposer(TradingStrategy):
 
         self.buy_strategies = [
             WeightedMovingAverageStrategy(
-                short_window=25, long_window=100, buy_when_short_below=True, period=15
+                short_window=40, long_window=100, buy_when_short_below=True, period=15
             ),
             WeightedMovingAverageStrategy(
-                short_window=6,
-                long_window=12,
-                buy_when_short_below=True,
-                period=15,
-                shift_past=10,
-            ),
-            WeightedMovingAverageStrategy(
-                short_window=6, long_window=12, buy_when_short_below=False, period=15
+                short_window=8, long_window=15, buy_when_short_below=False, period=15
             ),
         ]
         self.sell_strategies = [
-            TrailingStopLossStrategy(stop_loss_percent="0.2"),
-            TargetPercentStrategy(target_percent="0.5"),
+            TrailingStopLossStrategy(stop_loss_percent="0.5"),
+            TargetPercentStrategy(target_percent="5.3"),
         ]
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:

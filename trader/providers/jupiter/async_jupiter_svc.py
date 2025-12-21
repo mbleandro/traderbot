@@ -24,12 +24,13 @@ from .jupiter_public_api import (
 
 
 class AsyncJupiterProvider:
-    def __init__(self, keypair: Keypair):
+    def __init__(
+        self, keypair: Keypair, rpc_client=None, jupiter_client=None, is_dryrun=False
+    ):
         self.keypair = keypair
-        self.wallet = keypair.pubkey()
 
-        self.rpc_client = AsyncRPCClient()
-        self.jupiter_client = AsyncJupiterClient()
+        self.rpc_client = rpc_client or AsyncRPCClient(is_dryrun=is_dryrun)
+        self.jupiter_client = jupiter_client or AsyncJupiterClient()
         self.logger = logging.getLogger(__name__)
 
     async def get_candles(
@@ -80,24 +81,28 @@ class AsyncJupiterProvider:
 
     async def swap(
         self,
-        mint_in: Pubkey,
-        mint_out: Pubkey,
+        input_mint: Pubkey,
+        output_mint: Pubkey,
         type_order: str,
         quantity: Decimal,
         price: Decimal | None = None,
     ) -> str:
         amount_in = quantity * price if price else quantity
         amount_in = amount_in * (
-            10 ** SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(mint_in)]]
+            10 ** SOLANA_TOKENS_DECIMALS[SOLANA_TOKENS_BY_MINT[str(input_mint)]]
         )
         amount_in = int(amount_in)
-        return await self._do_swap_with_retry(str(mint_in), str(mint_out), amount_in)
+        return await self._do_swap_with_retry(
+            str(input_mint), str(output_mint), amount_in
+        )
 
-    async def _do_swap_with_retry(self, mint_in: str, mint_out: str, amount_in: int):
+    async def _do_swap_with_retry(
+        self, input_mint: str, output_mint: str, amount_in: int
+    ):
         for i in range(3):
             try:
                 return await self._do_swap(
-                    mint_in, mint_out, amount_in, [50, 50, 75][i]
+                    input_mint, output_mint, amount_in, [50, 50, 75][i]
                 )
             except Exception as e:
                 if i == 2:
@@ -113,13 +118,13 @@ class AsyncJupiterProvider:
 
     async def _get_quote_with_route(
         self,
-        mint_in: str,
-        mint_out: str,
+        input_mint: str,
+        output_mint: str,
         amount_in: int,
         slippage_bps: int = 50,
     ) -> JupiterQuoteResponse:
         quote = await self.jupiter_client.get_quote(
-            mint_in, mint_out, amount_in, slippage_bps
+            input_mint, output_mint, amount_in, slippage_bps
         )
 
         if not quote.routePlan:
@@ -161,13 +166,13 @@ class AsyncJupiterProvider:
 
     async def _do_swap(
         self,
-        mint_in: str,
-        mint_out: str,
+        input_mint: str,
+        output_mint: str,
         amount_in: int,
         slippage_bps: int = 50,
     ):
         quote = await self._get_quote_with_route(
-            mint_in, mint_out, amount_in, slippage_bps
+            input_mint, output_mint, amount_in, slippage_bps
         )
         tx = await self._get_swap_transaction(quote)
         new_tx = await self._get_signed_transaction(tx)

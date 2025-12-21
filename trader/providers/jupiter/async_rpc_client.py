@@ -18,11 +18,14 @@ from solana.rpc.async_api import AsyncClient
 
 
 class AsyncRPCClient:
-    def __init__(self):
-        self.rpc_url = os.getenv("HELIUS_RPC_URL")
-        assert self.rpc_url, "RPC URL não definida"
-        self.client = AsyncClient(self.rpc_url)
-        self.is_dryrun = True
+    def __init__(self, client=None, is_dryrun=False):
+        if client:
+            self.client = client
+        else:
+            rpc_url = os.getenv("HELIUS_RPC_URL")
+            assert rpc_url, "RPC URL não definida"
+            self.client = AsyncClient(rpc_url)
+        self.is_dryrun = is_dryrun
 
     async def wait_for_confirmation(self, signature, timeout=30) -> bool:
         if self.is_dryrun:
@@ -48,7 +51,7 @@ class AsyncRPCClient:
             if time.time() - start > timeout:
                 raise TimeoutError("Transação não foi confirmada a tempo.")
 
-            time.sleep(1)
+            await asyncio.sleep(1.0)
 
     async def sign_transaction(
         self, tx: VersionedTransaction, keypair: Keypair
@@ -111,7 +114,9 @@ class AsyncRPCClient:
             lamports = resp.value.lamports
             return Decimal(lamports)
 
-        raise Exception(f"Não foi possivel obter o balanco da pubkey: {str(pubkey)}")
+        raise Exception(
+            f"Não foi possivel obter o balanco da pubkey: {str(pubkey)}. {resp=}"
+        )
 
     async def get_account_balance(self, owner: Pubkey) -> dict[Pubkey, Decimal]:
         await self.client.is_connected()
