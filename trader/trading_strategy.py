@@ -36,6 +36,11 @@ class TradingStrategy(ABC):
         """Configura a estratégia, se necessário"""
         pass
 
+    def __repr__(self):
+        _vars = vars(self)
+        _vars.pop("logger")
+        return f"{self.__class__.__name__} with {vars(self)}"
+
 
 class RandomStrategy(TradingStrategy):
     def __init__(self, sell_chance: int, buy_chance: int):
@@ -543,9 +548,16 @@ class StrategyComposer(TradingStrategy):
         self.sell_strategies = sell_strategies
         if not sell_strategies:
             self.sell_strategies = [
-                TrailingStopLossStrategy(stop_loss_percent="3.5"),
-                TargetPercentStrategy(target_percent="5.5"),
+                TrailingStopLossStrategy(stop_loss_percent="3.1"),
+                TargetPercentStrategy(target_percent="6.01"),
             ]
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__} "
+            f"buy when {self.buy_mode} strategies={", ".join([str(s) for s in self.buy_strategies])}"
+            f"sell when {self.sell_mode} strategies={", ".join([str(s) for s in self.sell_strategies])}"
+        )
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
         # Usa a estratégia principal (primeira da lista) para calcular a quantidade

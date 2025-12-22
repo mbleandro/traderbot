@@ -30,6 +30,9 @@ class AsyncJupiterProvider:
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Starting bot on {is_dryrun=}")
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}.{str(self.keypair.pubkey())} with rpc {str(self.rpc_client)} and client {str(self.jupiter_client)}"
+
     async def get_candles(
         self,
         mint: Pubkey,

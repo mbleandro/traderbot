@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from functools import cached_property
 from solders.pubkey import Pubkey
 import logging
@@ -6,7 +7,7 @@ from decimal import Decimal
 
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 
-from .models import OrderSide, Position, PositionType, TickerData, Order, SOLANA_MINTS
+from .models import OrderSide, Position, PositionType, TickerData, Order
 
 
 class AsyncAccount:
@@ -20,12 +21,15 @@ class AsyncAccount:
         self.output_mint = output_mint
 
         self.current_position: Position | None = None
-        self.logger = logging.getLogger("Account")
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.total_pnl = Decimal("0.0")
 
         self.balances = None
         self.balances_last_update = datetime.min
         self.position_last_update = datetime.min
+
+    def __repr__(self):
+        return f"{self.__class__.__name__} for {self.input_mint=} and {self.output_mint=} with current_position on {self.current_position}"
 
     async def get_price(self, mint: Pubkey) -> TickerData:
         return await self.provider.get_price_ticker_data(mint)
@@ -38,7 +42,7 @@ class AsyncAccount:
         # temporario até achar um jeito mais eficiente
         if (
             not self.balances
-            or self.balances_last_update < datetime.now() - timedelta(minutes=1)
+            or self.balances_last_update < datetime.now() - timedelta(minutes=3)
             or self.position_last_update > self.balances_last_update
         ):
             self.balances = await self.provider.get_account_balance()
@@ -62,7 +66,7 @@ class AsyncAccount:
             return False
 
         brl_balance = await self.get_balance(self.input_mint)
-        self.logger.info(f"can_buy. {self.input_mint=} {brl_balance=}")
+        self.logger.debug(f"can_buy. input_mint={str(self.input_mint)} {brl_balance=}")
         return brl_balance > Decimal("0.01")  # Mínimo para operar
 
     async def can_sell(self) -> bool:
@@ -107,6 +111,7 @@ class AsyncAccount:
                 side=OrderSide.BUY,
                 timestamp=datetime.now(),
             )
+            self.logger.debug(f"ORDER PLACED: {asdict(order)}", extra=asdict(order))
             # Criar nova posição
             self.current_position = Position(
                 type=PositionType.LONG,
@@ -140,6 +145,7 @@ class AsyncAccount:
                 side=OrderSide.SELL,
                 timestamp=datetime.now(),
             )
+            self.logger.debug(f"ORDER PLACED: {asdict(order)}", extra=asdict(order))
             assert self.current_position
             self.current_position.exit_order = order
             self.total_pnl += self.current_position.realized_pnl

@@ -49,15 +49,6 @@ class AsyncRPCClient:
                 TransactionConfirmationStatus.Confirmed,
                 TransactionConfirmationStatus.Finalized,
             ]:
-                try:
-                    result = await self.client.get_transaction(signature)
-                    self.logger.info(f"get_transaction: {result}")
-                    self.logger.info(f"get_transaction: {result.value}")
-                    assert result.value
-                    self.logger.info(f"get_transaction: {result.value.to_json()}")
-                except Exception as ex:
-                    self.logger.info(f"ERROR get_transaction: {str(ex)}")
-
                 return True
             if status.err is not None:
                 raise Exception(f"Transação falhou: {status.err}")

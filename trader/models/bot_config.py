@@ -2,7 +2,7 @@ from trader.models import SOLANA_MINTS
 from solders.pubkey import Pubkey
 import os
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field, InitVar
 from enum import StrEnum, auto
 from trader.notification.notification_service import (
     NotificationService,
@@ -26,7 +26,7 @@ class BotConfig:
     input_mint: str  # a moeda que eu tenho
     output_mint: str  # a moeda que eu vou comprar
     # mode: RunningMode
-    wallet: Keypair
+    wallet: InitVar[Keypair]
     provider: AsyncJupiterProvider
     strategy: TradingStrategy
     notifier: NotificationService

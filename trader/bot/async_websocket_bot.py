@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from functools import cached_property
 from trader.models import SOLANA_MINTS
 from solders.pubkey import Pubkey
@@ -26,6 +27,7 @@ class AsyncWebsocketTradingBot:
         self.last_position: Position | None = None
         self.is_running = False
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.debug(f"start bot with config: {str(config)}")
 
         self.input_mint = Pubkey.from_string(config.input_mint)
         self.output_mint = Pubkey.from_string(config.output_mint)
@@ -126,15 +128,9 @@ def log_ticker(symbol: str, price: Decimal, realized_pnl: Decimal | None = None)
 
 
 def log_placed_order(order: Order):
+    msg = f"[gray]{order.side.upper()}[/gray] {order.quantity:.8f} @ ${order.price:.8f} [gray]({order.order_id})[gray]"
     bot_logger.info(
-        *[
-            Text(
-                order.side.upper(),
-                style="bold red" if order.side == "sell" else "bold green",
-            ),
-            Text(f"{order.quantity:.8f} @ R$ {order.price:.2f}", style="bold white"),
-            Text(f"({order.order_id})", style="dim blue"),
-        ],
+        msg,
         extra={"markup": True},
     )
 
@@ -145,10 +141,10 @@ def log_position(position: Position, current_price: Decimal):
         if position.exit_order is None
         else position.realized_pnl_percent
     )
-    pnl_style = "bold green" if pnl > 0 else "bold red"
+    pnl_style = "green" if pnl > 0 else "red"
     pnl_str = f"[{pnl_style}]{pnl:.2f}%[/{pnl_style}]"
 
     bot_logger.info(
-        f"{position.type.name} {position.entry_order.quantity:.8f} @ R$ {position.entry_order.price:.2f}. PNL: {pnl_str}",
+        f"{position.type.name} {position.entry_order.quantity:.8f} @ ${position.entry_order.price:.8f}. PNL: {pnl_str}",
         extra={"markup": True},
     )
