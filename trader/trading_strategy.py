@@ -656,31 +656,51 @@ class StrategyComposer(TradingStrategy):
     Combina múltiplas estratégias e executa caso todas sejam válidas.
     """
 
-    # def __init__(self, strategies: list[TradingStrategy]):
-    def __init__(self, sell_mode=str("all"), buy_mode=str("all")):
+    def __init__(
+        self,
+        sell_mode=str("all"),
+        buy_mode=str("all"),
+        buy_strategies: list[TradingStrategy] = [],
+        sell_strategies: list[TradingStrategy] = [],
+    ):
         assert sell_mode in ("all", "any")
         assert buy_mode in ("all", "any")
         self.sell_mode = sell_mode
         self.buy_mode = buy_mode
-
-        self.buy_strategies = [
-            WeightedMovingAverageStrategy(
-                short_window=50, long_window=100, buy_when_short_below=True, period=15
-            ),
-            WeightedMovingAverageStrategy(
-                short_window=15, long_window=100, buy_when_short_below=True, period=15
-            ),
-            WeightedMovingAverageStrategy(
-                short_window=15, long_window=30, buy_when_short_below=False, period=15
-            ),
-            WeightedMovingAverageStrategy(
-                short_window=5, long_window=10, buy_when_short_below=False, period=15
-            ),
-        ]
-        self.sell_strategies = [
-            TrailingStopLossStrategy(stop_loss_percent="3.5"),
-            TargetPercentStrategy(target_percent="5.5"),
-        ]
+        self.buy_strategies = buy_strategies
+        if not buy_strategies:
+            self.buy_strategies = [
+                WeightedMovingAverageStrategy(
+                    short_window=50,
+                    long_window=100,
+                    buy_when_short_below=True,
+                    period=15,
+                ),
+                WeightedMovingAverageStrategy(
+                    short_window=15,
+                    long_window=100,
+                    buy_when_short_below=True,
+                    period=15,
+                ),
+                WeightedMovingAverageStrategy(
+                    short_window=15,
+                    long_window=30,
+                    buy_when_short_below=False,
+                    period=15,
+                ),
+                WeightedMovingAverageStrategy(
+                    short_window=5,
+                    long_window=10,
+                    buy_when_short_below=False,
+                    period=15,
+                ),
+            ]
+        self.sell_strategies = sell_strategies
+        if not sell_strategies:
+            self.sell_strategies = [
+                TrailingStopLossStrategy(stop_loss_percent="3.5"),
+                TargetPercentStrategy(target_percent="5.5"),
+            ]
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
         # Usa a estratégia principal (primeira da lista) para calcular a quantidade
@@ -706,23 +726,49 @@ class StrategyComposer(TradingStrategy):
         balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
-        signals = []
         if current_position:
-            for strategy in self.sell_strategies:
-                signal = strategy.on_market_refresh(ticker, balance, current_position)
-                signals.append(signal)
-            if self._check_signals(signals, self.sell_mode, OrderSide.SELL):
-                return OrderSignal(
-                    OrderSide.SELL, current_position.entry_order.quantity
-                )
+            return self._refresh(
+                ticker,
+                balance,
+                current_position,
+                self.sell_strategies,
+                self.buy_strategies,
+                self.sell_mode,
+                OrderSide.SELL,
+            )
         else:
-            for strategy in self.buy_strategies:
-                signal = strategy.on_market_refresh(ticker, balance, current_position)
-                signals.append(signal)
-            if self._check_signals(signals, self.buy_mode, OrderSide.BUY):
-                return OrderSignal(
-                    OrderSide.BUY,
-                    quantity=self.calculate_quantity(balance, ticker.last),
-                )
+            return self._refresh(
+                ticker,
+                balance,
+                current_position,
+                self.buy_strategies,
+                self.sell_strategies,
+                self.buy_mode,
+                OrderSide.BUY,
+            )
 
+    def _refresh(
+        self,
+        ticker: TickerData,
+        balance: Decimal,
+        current_position: Position | None,
+        strategies_to_consider,
+        strategies_to_ignore,
+        mode,
+        side,
+    ):
+        for strategy in strategies_to_ignore:
+            # atualiza dados das estrategias, mas ignora signals
+            strategy.on_market_refresh(ticker, balance, current_position)
+
+        signals = []
+        for strategy in strategies_to_consider:
+            signal = strategy.on_market_refresh(ticker, balance, current_position)
+            signals.append(signal)
+
+        if self._check_signals(signals, mode, side):
+            return OrderSignal(
+                side,
+                quantity=self.calculate_quantity(balance, ticker.last),
+            )
         return None
