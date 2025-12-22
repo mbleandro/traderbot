@@ -1,5 +1,6 @@
+from propcache.api import cached_property
+import logging
 from solana.exceptions import SolanaRpcException
-import asyncio
 from solders.signature import Signature
 from solana.rpc.types import TokenAccountOpts
 from spl.token.constants import TOKEN_2022_PROGRAM_ID
@@ -8,7 +9,6 @@ from solders.pubkey import Pubkey
 from solders.rpc.responses import SendTransactionResp
 from solders.keypair import Keypair
 from solders.message import MessageV0, to_bytes_versioned
-import time
 from solders.solders import (
     TransactionConfirmationStatus,
     VersionedTransaction,
@@ -20,13 +20,21 @@ from solana.rpc.async_api import AsyncClient
 
 class AsyncRPCClient:
     def __init__(self, client=None, is_dryrun=False):
+        self.logger = logging.getLogger(self.__class__.__name__)
         if client:
             self.client = client
         else:
             rpc_url = os.getenv("HELIUS_RPC_URL")
             assert rpc_url, "RPC URL não definida"
             self.client = AsyncClient(rpc_url)
+        self._client_connected = False
         self.is_dryrun = is_dryrun
+
+    async def is_connected(self):
+        if self._client_connected:
+            return True
+        self._client_connected = await self.client.is_connected()
+        return self._client_connected
 
     async def check_signature_is_confirmed(self, signature) -> bool:
         if self.is_dryrun:
@@ -41,6 +49,15 @@ class AsyncRPCClient:
                 TransactionConfirmationStatus.Confirmed,
                 TransactionConfirmationStatus.Finalized,
             ]:
+                try:
+                    result = await self.client.get_transaction(signature)
+                    self.logger.info(f"get_transaction: {result}")
+                    self.logger.info(f"get_transaction: {result.value}")
+                    assert result.value
+                    self.logger.info(f"get_transaction: {result.value.to_json()}")
+                except Exception as ex:
+                    self.logger.info(f"ERROR get_transaction: {str(ex)}")
+
                 return True
             if status.err is not None:
                 raise Exception(f"Transação falhou: {status.err}")
@@ -50,7 +67,7 @@ class AsyncRPCClient:
     async def sign_transaction(
         self, tx: VersionedTransaction, keypair: Keypair
     ) -> VersionedTransaction:
-        await self.client.is_connected()
+        await self.is_connected()
         latest = await self.client.get_latest_blockhash()
 
         blockhash = latest.value.blockhash
@@ -74,7 +91,7 @@ class AsyncRPCClient:
         return new_tx
 
     async def simulate_transaction(self, new_tx: VersionedTransaction):
-        await self.client.is_connected()
+        await self.is_connected()
         simulation = await self.client.simulate_transaction(new_tx)
         if simulation.value.err:
             raise Exception(f"Erro ao simular transação: {str(simulation.value.err)}")
@@ -86,7 +103,7 @@ class AsyncRPCClient:
         if self.is_dryrun:
             return SendTransactionResp(value=Signature.new_unique())
 
-        await self.client.is_connected()
+        await self.is_connected()
         resp = await self.client.send_raw_transaction(bytes(new_tx))
         signature = resp.value
 
@@ -94,10 +111,10 @@ class AsyncRPCClient:
 
     async def get_lamports(self, pubkey: Pubkey) -> Decimal:
         try:
-            await self.client.is_connected()
+            await self.is_connected()
             resp = await self.client.get_account_info(pubkey)
         except SolanaRpcException as ex:
-            print(f"ERROR.get_lamports: {str(ex)}")
+            self.logger.error(f"ERROR.get_lamports: {str(ex)}")
 
         if resp.value:
             lamports = resp.value.lamports
@@ -108,7 +125,7 @@ class AsyncRPCClient:
         )
 
     async def get_account_balance(self, owner: Pubkey) -> dict[Pubkey, Decimal]:
-        await self.client.is_connected()
+        await self.is_connected()
         balances: dict[Pubkey, Decimal] = {}
 
         # ====================================================
@@ -127,6 +144,6 @@ class AsyncRPCClient:
                     amount = int.from_bytes(decoded[64:72], "little")
                     balances[mint] = Decimal(amount)
             except SolanaRpcException as ex:
-                print(f"ERROR.get_account_balance: {str(ex)}")
+                self.logger.error(f"ERROR.get_account_balance: {str(ex)}")
 
         return balances

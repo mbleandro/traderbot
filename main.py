@@ -1,13 +1,13 @@
 from trader.bot.async_websocket_bot import AsyncWebsocketTradingBot
-import warnings
+import logging
+from rich.logging import RichHandler
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
-from trader.trading_strategy import RandomStrategy, StrategyComposer
+from trader.trading_strategy import StrategyComposer
 from trader.models.bot_config import (
     create_bot_config,
     get_keypair_from_env,
     RunningMode,
 )
-from typing import Literal
 
 import typer
 
@@ -69,7 +69,6 @@ def start(
     ),
     symbol: str = typer.Argument("SOL-USDC", help="The trading symbol"),
 ):
-    print(f"Starting bot on {str(mode)} mode")
     provider = AsyncJupiterProvider(
         keypair=get_keypair_from_env(), is_dryrun=(mode == RunningMode.DRY)
     )
@@ -127,5 +126,20 @@ def __parse_kwargs(argv: list[str]) -> dict[str, str]:
     return kwargs
 
 
+def configure_logging():
+    LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+
+    fh = logging.FileHandler("bot.log")
+    fh.setLevel(logging.DEBUG)
+    ch = RichHandler()
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter(LOG_FORMAT)
+    fh.setFormatter(formatter)
+    ch.setFormatter(logging.Formatter("%(name)s - %(message)s"))
+
+    logging.basicConfig(level=logging.NOTSET, handlers=[fh, ch])
+
+
 if __name__ == "__main__":
+    configure_logging()
     app()

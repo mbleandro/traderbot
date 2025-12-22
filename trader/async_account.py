@@ -1,7 +1,7 @@
 from functools import cached_property
 from solders.pubkey import Pubkey
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
@@ -23,6 +23,10 @@ class AsyncAccount:
         self.logger = logging.getLogger("Account")
         self.total_pnl = Decimal("0.0")
 
+        self.balances = None
+        self.balances_last_update = datetime.min
+        self.position_last_update = datetime.min
+
     async def get_price(self, mint: Pubkey) -> TickerData:
         return await self.provider.get_price_ticker_data(mint)
 
@@ -30,9 +34,16 @@ class AsyncAccount:
         return await self.provider.get_candles(mint)
 
     async def get_balance(self, mint: Pubkey) -> Decimal:
-        """Obtém saldo de uma moeda específica"""
-        balances = await self.provider.get_account_balance()
-        for balance in balances:
+        # cachezinho babaca pra não ficar comendo token do RPC
+        # temporario até achar um jeito mais eficiente
+        if (
+            not self.balances
+            or self.balances_last_update < datetime.now() - timedelta(minutes=1)
+            or self.position_last_update > self.balances_last_update
+        ):
+            self.balances = await self.provider.get_account_balance()
+            self.balances_last_update = datetime.now()
+        for balance in self.balances:
             if balance.mint == mint:
                 return Decimal(str(balance.available))
         return Decimal("0.0")
@@ -51,7 +62,7 @@ class AsyncAccount:
             return False
 
         brl_balance = await self.get_balance(self.input_mint)
-        print(self.input_mint, brl_balance)
+        self.logger.info(f"can_buy. {self.input_mint=} {brl_balance=}")
         return brl_balance > Decimal("0.01")  # Mínimo para operar
 
     async def can_sell(self) -> bool:
@@ -102,6 +113,7 @@ class AsyncAccount:
                 entry_order=order,
                 exit_order=None,
             )
+            self.position_last_update = datetime.now()
             return order
 
         except Exception as ex:
@@ -132,6 +144,7 @@ class AsyncAccount:
             self.current_position.exit_order = order
             self.total_pnl += self.current_position.realized_pnl
             self.current_position = None
+            self.position_last_update = datetime.now()
 
             return order
 

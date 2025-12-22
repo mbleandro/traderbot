@@ -28,6 +28,7 @@ class AsyncJupiterProvider:
         self.rpc_client = rpc_client or AsyncRPCClient(is_dryrun=is_dryrun)
         self.jupiter_client = jupiter_client or AsyncJupiterClient()
         self.logger = logging.getLogger(__name__)
+        self.logger.info(f"Starting bot on {is_dryrun=}")
 
     async def get_candles(
         self,
@@ -120,7 +121,7 @@ class AsyncJupiterProvider:
         if not quote.routePlan:
             raise Exception("Nenhuma rota encontrada!")
 
-        print("✓ Rota encontrada.")
+        self.logger.info("✓ Rota encontrada.")
         return quote
 
     async def _get_swap_transaction(
@@ -143,11 +144,11 @@ class AsyncJupiterProvider:
         resp = await self.rpc_client.send_transaction(new_tx)
         signature = resp.value
 
-        print(f"✓ Transação enviada: {signature}")
+        self.logger.info(f"✓ Transação enviada: {signature}")
         return resp
 
     async def _wait_for_confirmation(self, signature, timeout=30):
-        print("→ Aguardando confirmação...")
+        self.logger.info("→ Aguardando confirmação...")
         # if self.is_dryrun:
         #     return True
 
@@ -161,9 +162,10 @@ class AsyncJupiterProvider:
                     raise Exception("Transação falhou: Esperando confirmacao")
             except Exception as ex:
                 if "Transação falhou" in str(ex):
-                    if time.time() - start > timeout:
-                        raise TimeoutError("Transação não foi confirmada a tempo.")
                     await asyncio.sleep(1.0)
+
+            if time.time() - start > timeout:
+                raise TimeoutError("Transação não foi confirmada a tempo.")
 
     async def _send_transaction_and_wait_for_confirmation(
         self, new_tx: VersionedTransaction

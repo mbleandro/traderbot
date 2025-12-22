@@ -108,18 +108,25 @@ class AsyncWebsocketTradingBot:
                 traceback.print_exc()
 
 
+bot_logger = logging.getLogger("bot")
+
+
 def log_ticker(symbol: str, price: Decimal, realized_pnl: Decimal | None = None):
     fiat_symbol = symbol.split("-")[1]
     if realized_pnl is not None:
-        console.print(
-            f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}. PNL Realizado: R$ {realized_pnl:.9f}"
+        bot_logger.info(
+            f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}. PNL Realizado: R$ {realized_pnl:.9f}",
+            extra={"markup": True},
         )
     else:
-        console.print(f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}.")
+        bot_logger.info(
+            f"[blue]{symbol}[/blue] @ {fiat_symbol} {price:.9f}.",
+            extra={"markup": True},
+        )
 
 
 def log_placed_order(order: Order):
-    console.print(
+    bot_logger.info(
         *[
             Text(
                 order.side.upper(),
@@ -127,7 +134,8 @@ def log_placed_order(order: Order):
             ),
             Text(f"{order.quantity:.8f} @ R$ {order.price:.2f}", style="bold white"),
             Text(f"({order.order_id})", style="dim blue"),
-        ]
+        ],
+        extra={"markup": True},
     )
 
 
@@ -140,6 +148,7 @@ def log_position(position: Position, current_price: Decimal):
     pnl_style = "bold green" if pnl > 0 else "bold red"
     pnl_str = f"[{pnl_style}]{pnl:.2f}%[/{pnl_style}]"
 
-    console.print(
-        f"{position.type.name} {position.entry_order.quantity:.8f} @ R$ {position.entry_order.price:.2f}. PNL: {pnl_str}"
+    bot_logger.info(
+        f"{position.type.name} {position.entry_order.quantity:.8f} @ R$ {position.entry_order.price:.2f}. PNL: {pnl_str}",
+        extra={"markup": True},
     )

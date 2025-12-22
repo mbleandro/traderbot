@@ -1,3 +1,4 @@
+import logging
 from tkinter import W
 from datetime import datetime, timedelta
 import random
@@ -13,6 +14,9 @@ from .models import OrderSide, OrderSignal, Position
 
 class TradingStrategy(ABC):
     """Classe base para estratégias de trading"""
+
+    def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
     def on_market_refresh(
@@ -35,6 +39,7 @@ class TradingStrategy(ABC):
 
 class RandomStrategy(TradingStrategy):
     def __init__(self, sell_chance: int, buy_chance: int):
+        super().__init__()
         self.buy_chance = buy_chance
         self.sell_chance = sell_chance
         self.price_history: list[Decimal] = []
@@ -90,6 +95,7 @@ class TargetValueStrategy(TradingStrategy):
         balance_percent: Decimal | str = "80",
         max_spread: Decimal | str = "1.5",
     ):
+        super().__init__()
         self.target_buy_price = Decimal(str(target_buy_price))
         self.target_profit_percent = Decimal(str(target_profit_percent))
         self.stop_loss_percent = Decimal(str(stop_loss_percent))
@@ -162,12 +168,12 @@ class TargetValueStrategy(TradingStrategy):
         # -----------------------
         # 6. Exibir resultados
         # -----------------------
-        print(f"Último preço: {latest['c']:.8f}")
-        print(f"EMA50: {latest['EMA50']:.8f}")
-        print(f"EMA200: {latest['EMA200']:.8f}")
-        print(f"ATR: {latest['ATR']:.8f}")
-        print(f"RSI14: {latest['RSI14']:.2f}")
-        print(f"Target buy calculado: {target_buy:.8f}")
+        self.logger.info(f"Último preço: {latest['c']:.8f}")
+        self.logger.info(f"EMA50: {latest['EMA50']:.8f}")
+        self.logger.info(f"EMA200: {latest['EMA200']:.8f}")
+        self.logger.info(f"ATR: {latest['ATR']:.8f}")
+        self.logger.info(f"RSI14: {latest['RSI14']:.2f}")
+        self.logger.info(f"Target buy calculado: {target_buy:.8f}")
 
         self.target_buy_price = target_buy
 
@@ -204,20 +210,20 @@ class TargetValueStrategy(TradingStrategy):
             # Compra quando o preço atingir ou estiver abaixo do valor alvo
             if current_price <= self.target_buy_price:
                 if spread is not None and spread > self.max_spread:
-                    print(f"Skip buying for high spread = {spread}")
-                    print(
+                    self.logger.info(f"Skip buying for high spread = {spread}")
+                    self.logger.info(
                         f"Current price: {current_price}; target buy: {self.target_buy_price}; spread: {spread}"
                     )
                     return None
                 if self.last_price is None or current_price < self.last_price:
-                    print("Skip buying - waiting for price to stop dropping")
-                    print(
+                    self.logger.info("Skip buying - waiting for price to stop dropping")
+                    self.logger.info(
                         f"Current price: {current_price}; target buy: {self.target_buy_price}; spread: {spread}"
                     )
                     self.last_price = current_price
                     return None
                 self.position_periods = 0
-                print(
+                self.logger.info(
                     f"Current price: {current_price} <= Target buy: {self.target_buy_price} - BUYING!"
                 )
                 return OrderSignal(
@@ -255,20 +261,20 @@ class TargetValueStrategy(TradingStrategy):
                 ) * Decimal("100")
 
                 # if self.position_periods >= self.max_position_periods:
-                #     print(f"Current price: {current_price} - SELLING!")
+                #     self.logger.info(f"Current price: {current_price} - SELLING!")
                 #     return OrderSignal(
                 #         OrderSide.SELL, current_position.entry_order.quantity
                 #     )
 
                 # Ativa stop loss se cair o percentual configurado
                 if drop_percent >= self.stop_loss_percent:
-                    print(f"Current price: {current_price} - SELLING!")
+                    self.logger.info(f"Current price: {current_price} - SELLING!")
                     return OrderSignal(
                         OrderSide.SELL, current_position.entry_order.quantity
                     )
 
         msg = f"Current price: {current_price:.9f}; target buy: {self.target_buy_price:.9f}"
-        print(msg)
+        self.logger.info(msg)
         self.last_price = current_price
         return None
 
@@ -288,6 +294,7 @@ class WeightedMovingAverageStrategy(TradingStrategy):
         period: int = 60,
         shift_past: int = 0,
     ):
+        super().__init__()
         self.short_window = short_window
         self.long_window = long_window
         self.buy_when_short_below = buy_when_short_below
@@ -347,19 +354,19 @@ class WeightedMovingAverageStrategy(TradingStrategy):
         msg = f"(S{self.short_window} L{self.long_window} {'B' if self.buy_when_short_below else 'A'} = "
         if not current_position:
             if self.buy_when_short_below and short_wma < long_wma:
-                print(msg + "OK)", end=" | ")
+                self.logger.info(msg + "OK)")
                 return OrderSignal(
                     OrderSide.BUY,
                     quantity=self.calculate_quantity(balance, price),
                 )
 
             if not self.buy_when_short_below and short_wma > long_wma:
-                print(msg + "OK)", end=" | ")
+                self.logger.info(msg + "OK)")
                 return OrderSignal(
                     OrderSide.BUY,
                     quantity=self.calculate_quantity(balance, price),
                 )
-        print(msg + "NOK)", end=" | ")
+        self.logger.info(msg + "NOK)")
         return None
 
 
@@ -374,6 +381,7 @@ class TrailingStopLossStrategy(TradingStrategy):
         stop_loss_percent: Decimal | str = "1",
         balance_percent: Decimal | str = "80",
     ):
+        super().__init__()
         self.stop_loss_percent = Decimal(str(stop_loss_percent))
         self.balance_percent = Decimal(str(balance_percent))
 
@@ -414,7 +422,7 @@ class TrailingStopLossStrategy(TradingStrategy):
                 (self.highest_price_after_target - current_price)
                 / self.highest_price_after_target
             ) * Decimal("100")
-            print(
+            self.logger.info(
                 f"Trail SL: P{drop_percent * -1:.2f}%  SL{self.stop_loss_percent * -1:.2f}%"
             )
             # Ativa stop loss se cair o percentual configurado
@@ -438,6 +446,7 @@ class TargetPercentStrategy(TradingStrategy):
         target_percent: Decimal | str = "1",
         balance_percent: Decimal | str = "80",
     ):
+        super().__init__()
         self.target_percent = Decimal(str(target_percent))
         self.balance_percent = Decimal(str(balance_percent))
 
@@ -472,7 +481,9 @@ class TargetPercentStrategy(TradingStrategy):
                 (current_price - current_position.entry_order.price)
                 / current_position.entry_order.price
             ) * Decimal("100")
-            print(f"Target: P{current_percent:.2f}%  T{self.target_percent:.2f}%")
+            self.logger.info(
+                f"Target: P{current_percent:.2f}%  T{self.target_percent:.2f}%"
+            )
 
             # Ativa stop loss se cair o percentual configurado
             if current_percent >= self.target_percent:
@@ -496,6 +507,7 @@ class StrategyComposer(TradingStrategy):
         buy_strategies: list[TradingStrategy] = [],
         sell_strategies: list[TradingStrategy] = [],
     ):
+        super().__init__()
         assert sell_mode in ("all", "any")
         assert buy_mode in ("all", "any")
         self.sell_mode = sell_mode
@@ -550,7 +562,7 @@ class StrategyComposer(TradingStrategy):
             signal = all(s and s.side == side for s in signals)
         elif mode == "any":
             signal = any(s and s.side == side for s in signals)
-        print(f"[{str(side) if signal else 'HOLD'}]")
+        self.logger.info(f"[{str(side) if signal else 'HOLD'}]")
         return signal
 
     def on_market_refresh(
