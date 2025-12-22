@@ -42,7 +42,8 @@ class AsyncWebsocketTradingBot:
 
     async def process_market_data(self, current_ticker: TickerData):
         position_signal = self.strategy.on_market_refresh(
-            current_ticker,
+            current_ticker.last,
+            current_ticker.spread,
             await self.account.get_balance(self.input_mint),
             self.account.get_position(),
         )

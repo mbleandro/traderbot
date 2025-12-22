@@ -5,23 +5,6 @@ from trader.models.order import Order
 from trader.trading_strategy import StrategyComposer, TradingStrategy
 
 
-def _ticker_data(price: float) -> TickerData:
-    _price = Decimal(f"{price}")
-    symbol = "SOL-USDC"
-    return TickerData(
-        buy=_price,
-        timestamp=datetime.now(),
-        high=_price,
-        last=_price,
-        low=_price,
-        open=_price,
-        pair=symbol,
-        sell=_price,
-        vol=Decimal("0"),
-        spread=Decimal("0.50"),
-    )
-
-
 class FakeStrategy(TradingStrategy):
     def __init__(self, side: OrderSide):
         self.count = 0
@@ -29,7 +12,8 @@ class FakeStrategy(TradingStrategy):
 
     def on_market_refresh(
         self,
-        ticker: TickerData,
+        price: Decimal,
+        spread: Decimal | None,
         balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
@@ -44,7 +28,12 @@ def test_composer_call_refresh_for_all_when_buy():
         buy_strategies=[buy_strategy], sell_strategies=[sell_strategy]
     )
     for i in range(3):
-        signal = comp.on_market_refresh(_ticker_data(10.0), Decimal("100.00"), None)
+        signal = comp.on_market_refresh(
+            Decimal("10.0001"),
+            Decimal("0.0001"),
+            Decimal("100.00"),
+            None,
+        )
         assert signal
         assert signal.side == OrderSide.BUY
     assert buy_strategy.count == 3
@@ -59,7 +48,8 @@ def test_composer_call_refresh_for_all_when_sell():
     )
     for i in range(3):
         signal = comp.on_market_refresh(
-            _ticker_data(10.0),
+            Decimal("10.0001"),
+            Decimal("0.0001"),
             Decimal("100.00"),
             Position(
                 type=PositionType.LONG,

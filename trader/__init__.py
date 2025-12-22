@@ -1,5 +1,4 @@
 from .trading_strategy import (
-    DynamicTargetStrategy,
     RandomStrategy,
     StrategyComposer,
     TargetValueStrategy,
@@ -14,7 +13,6 @@ class NotImplementedStrategy(Exception):
 STRATEGIES = {
     "random": RandomStrategy,
     "target_value": TargetValueStrategy,
-    "dynamic_target": DynamicTargetStrategy,
     "composer": StrategyComposer,
 }
 

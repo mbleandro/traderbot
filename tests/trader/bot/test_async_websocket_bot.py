@@ -140,7 +140,8 @@ class FakeStrategy(TradingStrategy):
 
     def on_market_refresh(
         self,
-        ticker: TickerData,
+        price: Decimal,
+        spread: Decimal | None,
         balance: Decimal,
         current_position: Position | None,
     ) -> OrderSignal | None:
@@ -151,9 +152,7 @@ class FakeStrategy(TradingStrategy):
         if current_position:
             return OrderSignal(OrderSide.SELL, current_position.entry_order.quantity)
         else:
-            return OrderSignal(
-                OrderSide.BUY, self.calculate_quantity(balance, ticker.last)
-            )
+            return OrderSignal(OrderSide.BUY, self.calculate_quantity(balance, price))
 
 
 # async def test_async_websocket_bot_complete():

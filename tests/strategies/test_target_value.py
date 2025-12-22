@@ -9,23 +9,6 @@ from trader.models.public_data import TickerData
 from trader.trading_strategy import TargetValueStrategy
 
 
-def _ticker_data(price: float) -> TickerData:
-    _price = Decimal(f"{price}")
-    symbol = "SOL-USDC"
-    return TickerData(
-        buy=_price,
-        timestamp=datetime.now(),
-        high=_price,
-        last=_price,
-        low=_price,
-        open=_price,
-        pair=symbol,
-        sell=_price,
-        vol=Decimal("0"),
-        spread=Decimal("0.50"),
-    )
-
-
 class TestTarketValueBuy:
     def test_target_price_not_reached(self):
         strategy = TargetValueStrategy(
@@ -37,7 +20,10 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("10.0001")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=10.0001), Decimal("100.00"), current_position=None
+            Decimal("9.9999"),
+            Decimal("0"),
+            Decimal("0"),
+            None,
         )
         assert order_signal is None
 
@@ -51,7 +37,10 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9999), Decimal("100.00"), current_position=None
+            Decimal("9.9999"),
+            Decimal("0"),
+            Decimal("0"),
+            None,
         )
         assert order_signal
         assert order_signal.side == "buy"
@@ -66,7 +55,10 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9999), Decimal("100.00"), current_position=None
+            Decimal("9.9999"),
+            Decimal("101"),
+            Decimal("0"),
+            None,
         )
         assert order_signal is None
 
@@ -80,7 +72,10 @@ class TestTarketValueBuy:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9998), Decimal("100.00"), current_position=None
+            Decimal("9.9998"),
+            Decimal("0"),
+            Decimal("0"),
+            None,
         )
         assert order_signal is None
 
@@ -112,7 +107,8 @@ class TestTarketValueSell:
         )
         strategy.last_price = Decimal("9.9999")
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=9.9999),
+            Decimal("9.9999"),
+            Decimal("9.9999"),
             Decimal("100.00"),
             current_position=self.current_position,
         )
@@ -127,7 +123,8 @@ class TestTarketValueSell:
             max_spread=Decimal("100.0"),
         )
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=11.9999),
+            Decimal("11.9999"),
+            Decimal("11.9999"),
             Decimal("100.00"),
             current_position=self.current_position,
         )
@@ -145,7 +142,8 @@ class TestTarketValueSell:
             max_spread=Decimal("100.0"),
         )
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=11.9999),
+            Decimal("11.9999"),
+            Decimal("11.9999"),
             Decimal("100.00"),
             current_position=self.current_position,
         )
@@ -154,7 +152,8 @@ class TestTarketValueSell:
         assert strategy.highest_price_after_target == Decimal("11.9999")
 
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=12.9999),
+            Decimal("12.9999"),
+            Decimal("12.9999"),
             Decimal("100.00"),
             current_position=self.current_position,
         )
@@ -174,33 +173,11 @@ class TestTarketValueSell:
         strategy.highest_price_after_target = Decimal("12.5000")
 
         order_signal = strategy.on_market_refresh(
-            _ticker_data(price=10.9999),
+            Decimal("10.9999"),
+            Decimal("10.9999"),
             Decimal("100.00"),
             current_position=self.current_position,
         )
         # valor atual é percentualmente menor do que o valor mais alto regitrado após atingir o lucro alvo
         assert order_signal
         assert order_signal.side == "sell"
-
-
-# def test_random_strategy_sell():
-#     strategy = TargetValueStrategy(sell_chance=100, buy_chance=100)
-#     balance = Decimal("1000")
-#     order_signal = strategy.on_market_refresh(
-#         _ticker_data(price=10.0001),
-#         balance,
-#         current_position=Position(
-#             type=PositionType.LONG,
-#             entry_order=Order(
-#                 order_id="1",
-#                 symbol="SOL-USDC",
-#                 quantity=Decimal("10"),
-#                 price=Decimal("10.0001"),
-#                 side=OrderSide.BUY,
-#                 timestamp=datetime.now(),
-#             ),
-#             exit_order=None,
-#         ),
-#     )
-#     assert order_signal
-#     assert order_signal.side == "sell"
