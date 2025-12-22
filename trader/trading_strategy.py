@@ -38,8 +38,8 @@ class TradingStrategy(ABC):
 
     def __repr__(self):
         _vars = vars(self)
-        _vars.pop("logger")
-        return f"{self.__class__.__name__} with {vars(self)}"
+        _vars = {k: str(v) for k, v in vars(self).items() if k != "logger"}
+        return f"{self.__class__.__name__} with {_vars}"
 
 
 class RandomStrategy(TradingStrategy):
@@ -68,12 +68,14 @@ class RandomStrategy(TradingStrategy):
                     OrderSide.BUY,
                     quantity=self.calculate_quantity(balance, price),
                 )
+                self.logger.debug("buying at random")
         else:
             if random.randint(1, 100) <= int(self.sell_chance):
                 self.price_history = []
                 return OrderSignal(
                     OrderSide.SELL, current_position.entry_order.quantity
                 )
+                self.logger.debug("selling at random")
         return None
 
 
@@ -555,8 +557,8 @@ class StrategyComposer(TradingStrategy):
     def __repr__(self):
         return (
             f"{self.__class__.__name__} "
-            f"buy when {self.buy_mode} strategies={", ".join([str(s) for s in self.buy_strategies])}"
-            f"sell when {self.sell_mode} strategies={", ".join([str(s) for s in self.sell_strategies])}"
+            f"buy when {self.buy_mode} strategies={', '.join([str(s) for s in self.buy_strategies])}"
+            f"sell when {self.sell_mode} strategies={', '.join([str(s) for s in self.sell_strategies])}"
         )
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
