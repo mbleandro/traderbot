@@ -1,3 +1,4 @@
+from solana.exceptions import SolanaRpcException
 import asyncio
 from solders.signature import Signature
 from solana.rpc.types import TokenAccountOpts
@@ -27,31 +28,24 @@ class AsyncRPCClient:
             self.client = AsyncClient(rpc_url)
         self.is_dryrun = is_dryrun
 
-    async def wait_for_confirmation(self, signature, timeout=30) -> bool:
+    async def check_signature_is_confirmed(self, signature) -> bool:
         if self.is_dryrun:
             return True
 
-        start = time.time()
+        result = await self.client.get_signature_statuses([signature])
+        status = result.value[0]
 
-        while True:
-            result = await self.client.get_signature_statuses([signature])
-            status = result.value[0]
+        if status is not None:
+            # Se a transação foi processada
+            if status.confirmation_status in [
+                TransactionConfirmationStatus.Confirmed,
+                TransactionConfirmationStatus.Finalized,
+            ]:
+                return True
+            if status.err is not None:
+                raise Exception(f"Transação falhou: {status.err}")
 
-            if status is not None:
-                # Se a transação foi processada
-                if status.confirmation_status in [
-                    TransactionConfirmationStatus.Confirmed,
-                    TransactionConfirmationStatus.Finalized,
-                ]:
-                    return True
-                if status.err is not None:
-                    raise Exception(f"Transação falhou: {status.err}")
-
-            # Timeout
-            if time.time() - start > timeout:
-                raise TimeoutError("Transação não foi confirmada a tempo.")
-
-            await asyncio.sleep(1.0)
+        raise Exception(f"Transação falhou: {result.value}")
 
     async def sign_transaction(
         self, tx: VersionedTransaction, keypair: Keypair
@@ -98,18 +92,13 @@ class AsyncRPCClient:
 
         return resp
 
-    async def get_balance(self, pubkey: Pubkey) -> Decimal:
-        await self.client.is_connected()
-        resp = await self.client.get_account_info(pubkey)
-        if resp.value:
-            lamports = resp.value.lamports
-            return Decimal(lamports)
-
-        raise Exception(f"Não foi possivel obter o balanco da pubkey: {str(pubkey)}")
-
     async def get_lamports(self, pubkey: Pubkey) -> Decimal:
-        await self.client.is_connected()
-        resp = await self.client.get_account_info(pubkey)
+        try:
+            await self.client.is_connected()
+            resp = await self.client.get_account_info(pubkey)
+        except SolanaRpcException as ex:
+            print(f"ERROR.get_lamports: {str(ex)}")
+
         if resp.value:
             lamports = resp.value.lamports
             return Decimal(lamports)
@@ -126,15 +115,18 @@ class AsyncRPCClient:
         # 2 - Listar todas as contas SPL pertencentes à wallet
         # ====================================================
         for token in [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID]:
-            token_accounts = await self.client.get_token_accounts_by_owner(
-                owner, TokenAccountOpts(program_id=token)
-            )
+            try:
+                token_accounts = await self.client.get_token_accounts_by_owner(
+                    owner, TokenAccountOpts(program_id=token)
+                )
 
-            for token_acc in token_accounts.value:
-                info = token_acc.account.data  # base64 data
-                decoded = bytes(info)
-                mint = Pubkey(decoded[0:32])
-                amount = int.from_bytes(decoded[64:72], "little")
-                balances[mint] = Decimal(amount)
+                for token_acc in token_accounts.value:
+                    info = token_acc.account.data  # base64 data
+                    decoded = bytes(info)
+                    mint = Pubkey(decoded[0:32])
+                    amount = int.from_bytes(decoded[64:72], "little")
+                    balances[mint] = Decimal(amount)
+            except SolanaRpcException as ex:
+                print(f"ERROR.get_account_balance: {str(ex)}")
 
         return balances

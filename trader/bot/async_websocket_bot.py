@@ -53,6 +53,8 @@ class AsyncWebsocketTradingBot:
                 position_signal.side,
                 position_signal.quantity,
             )
+            # da tempo da wallet atualizar a operacao feita.
+            await asyncio.sleep(2.0)
         return order
 
     def stop(self):
@@ -101,7 +103,7 @@ class AsyncWebsocketTradingBot:
                 return
 
             except Exception as ex:
-                self.logger.error(f"Erro no loop principal: {str(ex)}")
+                self.logger.error(f"ERROR: Erro no loop principal: {str(ex)}")
                 traceback.print_exc()
 
 

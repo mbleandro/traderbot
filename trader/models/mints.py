@@ -79,5 +79,6 @@ SOLANA_MINTS = SolanaMints(
         Mint("JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN", "JUP", 6),
         Mint("pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn", "PUMP", 6),
         Mint("2Dyzu65QA9zdX1UeE7Gx71k7fiwyUK6sZdrvJ7auq5wm", "TURBO", 8),
+        Mint("C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon", "NOBODY", 9),
     ]
 )

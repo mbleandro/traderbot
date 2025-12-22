@@ -513,23 +513,22 @@ class WeightedMovingAverageStrategy(TradingStrategy):
 
         short_wma = self.weighted_moving_average(self.price_history, self.short_window)
         long_wma = self.weighted_moving_average(self.price_history, self.long_window)
-        print(
-            f"{self.__class__.__name__}: Short: {short_wma:.9f}; Long: {long_wma:.9f} {self.buy_when_short_below=} {self.shift_past=}"
-            f" can_buy={not current_position is not None and ((self.buy_when_short_below and short_wma < long_wma) or (not self.buy_when_short_below and short_wma > long_wma))}"
-        )
+        msg = f"(S{self.short_window} L{self.long_window} {'B' if self.buy_when_short_below else 'A'} = "
         if not current_position:
             if self.buy_when_short_below and short_wma < long_wma:
+                print(msg + "OK)", end=" | ")
                 return OrderSignal(
                     OrderSide.BUY,
                     quantity=self.calculate_quantity(balance, ticker.last),
                 )
 
             if not self.buy_when_short_below and short_wma > long_wma:
+                print(msg + "OK)", end=" | ")
                 return OrderSignal(
                     OrderSide.BUY,
                     quantity=self.calculate_quantity(balance, ticker.last),
                 )
-
+        print(msg + "NOK)", end=" | ")
         return None
 
 
@@ -584,7 +583,7 @@ class TrailingStopLossStrategy(TradingStrategy):
                 / self.highest_price_after_target
             ) * Decimal("100")
             print(
-                f"TrailingStopLossStrategy: drop_percent={drop_percent:.2f}% from highest_price={self.highest_price_after_target:.9f} to current_price={current_price:.9f}"
+                f"Trail SL: P{drop_percent * -1:.2f}%  SL{self.stop_loss_percent * -1:.2f}%"
             )
             # Ativa stop loss se cair o percentual configurado
             if drop_percent >= self.stop_loss_percent:
@@ -637,11 +636,11 @@ class TargetPercentStrategy(TradingStrategy):
         else:
             # Calcula o percentual do preco atual em relacão a posicao atual
             current_percent = (
-                (current_price - current_position.entry_order.price) / current_price
+                (current_price - current_position.entry_order.price)
+                / current_position.entry_order.price
             ) * Decimal("100")
-            print(
-                f"TargetPercentStrategy: drop_percent={current_percent:.2f}% from entry_order.price={current_position.entry_order.price:.9f} to current_price={current_price:.9f}"
-            )
+            print(f"Target: P{current_percent:.2f}%  T{self.target_percent:.2f}%")
+
             # Ativa stop loss se cair o percentual configurado
             if current_percent >= self.target_percent:
                 return OrderSignal(
@@ -666,15 +665,21 @@ class StrategyComposer(TradingStrategy):
 
         self.buy_strategies = [
             WeightedMovingAverageStrategy(
-                short_window=40, long_window=100, buy_when_short_below=True, period=15
+                short_window=50, long_window=100, buy_when_short_below=True, period=15
             ),
             WeightedMovingAverageStrategy(
-                short_window=8, long_window=15, buy_when_short_below=False, period=15
+                short_window=15, long_window=100, buy_when_short_below=True, period=15
+            ),
+            WeightedMovingAverageStrategy(
+                short_window=15, long_window=30, buy_when_short_below=False, period=15
+            ),
+            WeightedMovingAverageStrategy(
+                short_window=5, long_window=10, buy_when_short_below=False, period=15
             ),
         ]
         self.sell_strategies = [
-            TrailingStopLossStrategy(stop_loss_percent="0.5"),
-            TargetPercentStrategy(target_percent="5.3"),
+            TrailingStopLossStrategy(stop_loss_percent="3.5"),
+            TargetPercentStrategy(target_percent="5.5"),
         ]
 
     def calculate_quantity(self, balance: Decimal, price: Decimal) -> Decimal:
@@ -687,11 +692,13 @@ class StrategyComposer(TradingStrategy):
         return super().setup(ticker_history)
 
     def _check_signals(self, signals, mode: str, side: OrderSide) -> bool:
+        signal = False
         if mode == "all":
-            return all(s and s.side == side for s in signals)
+            signal = all(s and s.side == side for s in signals)
         elif mode == "any":
-            return any(s and s.side == side for s in signals)
-        return False
+            signal = any(s and s.side == side for s in signals)
+        print(f"[{str(side) if signal else 'HOLD'}]")
+        return signal
 
     def on_market_refresh(
         self,
@@ -705,7 +712,6 @@ class StrategyComposer(TradingStrategy):
                 signal = strategy.on_market_refresh(ticker, balance, current_position)
                 signals.append(signal)
             if self._check_signals(signals, self.sell_mode, OrderSide.SELL):
-                print(f"Strategy SELL")
                 return OrderSignal(
                     OrderSide.SELL, current_position.entry_order.quantity
                 )
@@ -714,7 +720,6 @@ class StrategyComposer(TradingStrategy):
                 signal = strategy.on_market_refresh(ticker, balance, current_position)
                 signals.append(signal)
             if self._check_signals(signals, self.buy_mode, OrderSide.BUY):
-                print(f"Strategy BUY")
                 return OrderSignal(
                     OrderSide.BUY,
                     quantity=self.calculate_quantity(balance, ticker.last),

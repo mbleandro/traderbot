@@ -1,4 +1,6 @@
+import asyncio
 from datetime import datetime
+import time
 from solders.pubkey import Pubkey
 
 from trader.models import TickerData, SOLANA_MINTS
@@ -104,10 +106,6 @@ class AsyncJupiterProvider:
                 )
         raise Exception("Erro ao executar swap após múltiplas tentativas")
 
-    async def _wait_for_confirmation(self, signature, timeout=30):
-        print("→ Aguardando confirmação...")
-        await self.rpc_client.wait_for_confirmation(signature, timeout)
-
     async def _get_quote_with_route(
         self,
         input_mint: str,
@@ -147,6 +145,25 @@ class AsyncJupiterProvider:
 
         print(f"✓ Transação enviada: {signature}")
         return resp
+
+    async def _wait_for_confirmation(self, signature, timeout=30):
+        print("→ Aguardando confirmação...")
+        # if self.is_dryrun:
+        #     return True
+
+        start = time.time()
+
+        while True:
+            try:
+                if await self.rpc_client.check_signature_is_confirmed(signature):
+                    return True
+                else:
+                    raise Exception("Transação falhou: Esperando confirmacao")
+            except Exception as ex:
+                if "Transação falhou" in str(ex):
+                    if time.time() - start > timeout:
+                        raise TimeoutError("Transação não foi confirmada a tempo.")
+                    await asyncio.sleep(1.0)
 
     async def _send_transaction_and_wait_for_confirmation(
         self, new_tx: VersionedTransaction
