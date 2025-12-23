@@ -39,12 +39,16 @@ class AsyncWebsocketTradingBot:
 
         self.total_pnl = Decimal("0.0")
 
+        self.stop_when_error = False
+
     async def process_market_data(self, current_price):
+        _bal = await self.account.get_balance(self.input_mint)
+        _pos = self.account.get_position()
         position_signal = self.strategy.on_market_refresh(
             current_price,
             None,  # não vem no websocket
-            await self.account.get_balance(self.input_mint),
-            self.account.get_position(),
+            _bal,
+            _pos,
         )
         order = None
         if position_signal:
@@ -74,7 +78,8 @@ class AsyncWebsocketTradingBot:
         should_stop = False
         self.notification_service.send_message(f"Bot iniciado para {self.symbol}")
 
-        while not should_stop:
+        has_error = False
+        while not should_stop and not (self.stop_when_error and has_error):
             try:
                 current_price = await self.account.get_price(self.output_mint)
                 log_ticker(
@@ -103,8 +108,11 @@ class AsyncWebsocketTradingBot:
                 return
 
             except Exception as ex:
-                self.logger.error(f"ERROR: Erro no loop principal: {str(ex)}")
+                self.logger.error(
+                    f"ERROR: Erro no loop principal: {str(ex)}", exc_info=True
+                )
                 traceback.print_exc()
+                has_error = True
 
 
 bot_logger = logging.getLogger("bot")

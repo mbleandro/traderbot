@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from decimal import Decimal
@@ -114,11 +113,7 @@ class AsyncRPCClient:
         try:
             await self.is_connected()
             resp = await self.client.send_raw_transaction(bytes(new_tx))
-            try:
-                return json.loads(resp.value.to_bytes())["result"]
-            except Exception as ex:
-                self.logger.error(f"ERROR.send_transaction.convert_result: {str(ex)}")
-                return resp
+            return resp
         finally:
             self.logger.debug(
                 f"send_transaction: tx={new_tx.to_json()} {resp.to_json()=}"

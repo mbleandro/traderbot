@@ -82,7 +82,7 @@ class AsyncJupiterProvider:
             )
         return balances
 
-    async def swap(
+    async def buy(
         self,
         input_mint: Pubkey,
         output_mint: Pubkey,
@@ -91,11 +91,38 @@ class AsyncJupiterProvider:
         price: Decimal | None = None,
     ) -> str:
         amount_in = quantity * price if price else quantity
-        input_mint_info = SOLANA_MINTS[input_mint]
-        return await self._do_swap_with_retry(
+        raw_quantity = SOLANA_MINTS[input_mint].ui_to_raw(amount_in)
+        return await self.swap(
             str(input_mint),
             str(output_mint),
-            input_mint_info.ui_to_raw(amount_in),
+            raw_quantity,
+        )
+
+    async def sell(
+        self,
+        input_mint: Pubkey,
+        output_mint: Pubkey,
+        type_order: str,
+        quantity: Decimal,
+    ) -> str:
+        raw_quantity = SOLANA_MINTS[input_mint].ui_to_raw(quantity)
+        # venda inverte os mints
+        return await self.swap(
+            str(output_mint),
+            str(input_mint),
+            raw_quantity,
+        )
+
+    async def swap(
+        self,
+        input_mint: str,
+        output_mint: str,
+        raw_quantity: int,
+    ) -> str:
+        return await self._do_swap_with_retry(
+            input_mint,
+            output_mint,
+            raw_quantity,
         )
 
     async def _do_swap_with_retry(
@@ -195,4 +222,8 @@ class AsyncJupiterProvider:
         tx = await self._get_swap_transaction(quote)
         new_tx = await self._get_signed_transaction(tx)
         resp = await self._send_transaction_and_wait_for_confirmation(new_tx)
+        # try:
+        #     return json.loads(resp.value.to_bytes())["result"]
+        # except Exception as ex:
+        #     self.logger.error(f"ERROR.send_transaction.convert_result: {str(ex)}")
         return resp.to_json()

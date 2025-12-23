@@ -109,7 +109,7 @@ class AsyncAccount:
         await self.can_buy()
 
         try:
-            order_id = await self.provider.swap(
+            order_id = await self.provider.buy(
                 self.input_mint,
                 self.output_mint,
                 type_order="market",
@@ -143,9 +143,9 @@ class AsyncAccount:
         await self.can_sell()
 
         try:
-            order_id = await self.provider.swap(
-                self.output_mint,
+            order_id = await self.provider.sell(
                 self.input_mint,
+                self.output_mint,
                 type_order="market",
                 quantity=quantity,
             )
