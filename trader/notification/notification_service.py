@@ -36,4 +36,4 @@ class TelegramNotificationService(NotificationService):
             )
             response.raise_for_status()
         except Exception as e:
-            self.logger.warning("Erro ao enviar alerta Telegram:", e)
+            self.logger.warning("Erro ao enviar alerta Telegram:", exc_info=e)

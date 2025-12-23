@@ -23,7 +23,7 @@ class Mint:
         scale = Decimal(10) ** self.decimals
         return int(ui * scale)
 
-    def raw_to_ui(self, raw_amount: int) -> Decimal:
+    def raw_to_ui(self, raw_amount: int | Decimal) -> Decimal:
         """
         Converte valor raw (int) para UI
         """

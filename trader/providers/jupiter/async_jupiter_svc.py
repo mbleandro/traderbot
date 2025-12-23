@@ -61,10 +61,9 @@ class AsyncJupiterProvider:
         # Saldo de SOL (lamports)
         amount = await self.rpc_client.get_lamports(self.keypair.pubkey())
         solana_mint = SOLANA_MINTS.get_by_symbol("SOL")
-        _amount = amount / (10**solana_mint.decimals)
         balances.append(
             MintBalance(
-                available=_amount,
+                available=solana_mint.raw_to_ui(amount),
                 mint=solana_mint.pubkey,
             )
         )
@@ -74,8 +73,9 @@ class AsyncJupiterProvider:
             mint_info = SOLANA_MINTS.get(mint)
             if not mint_info:
                 continue
-            _amount = amount / (10**mint_info.decimals)
-            balances.append(MintBalance(available=_amount, mint=mint))
+            balances.append(
+                MintBalance(available=mint_info.raw_to_ui(amount), mint=mint)
+            )
         return balances
 
     async def swap(
@@ -88,10 +88,10 @@ class AsyncJupiterProvider:
     ) -> str:
         amount_in = quantity * price if price else quantity
         input_mint_info = SOLANA_MINTS[input_mint]
-        amount_in = amount_in * (10**input_mint_info.decimals)
-        amount_in = int(amount_in)
         return await self._do_swap_with_retry(
-            str(input_mint), str(output_mint), amount_in
+            str(input_mint),
+            str(output_mint),
+            input_mint_info.ui_to_raw(amount_in),
         )
 
     async def _do_swap_with_retry(

@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import patch
 
 from trader.notification.notification_service import (
@@ -23,9 +24,11 @@ def test_telegram_send_message_success(mock_post):
 
 
 @patch("requests.post")
-def test_telegram_send_message_handles_exception(mock_post, capsys):
+def test_telegram_send_message_handles_exception(mock_post, caplog):
     mock_post.side_effect = Exception("Network error")
     service = TelegramNotificationService("12345", "token123")
-    service.send_message("Hello World")
-    captured = capsys.readouterr()
-    assert "Erro ao enviar alerta Telegram:" in captured.out
+
+    with caplog.at_level(logging.INFO):
+        service.send_message("Hello World")
+    captured = caplog
+    assert "Erro ao enviar alerta Telegram:" in caplog.text

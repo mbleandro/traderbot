@@ -20,6 +20,9 @@ from solders.solders import (
     to_bytes_versioned,
     transfer,
     MessageV0,
+    SimulateTransactionResp,
+    RpcSimulateTransactionResult,
+    SendTransactionResp,
 )
 from solders.transaction import VersionedTransaction
 
@@ -324,12 +327,14 @@ class TestPlaceOrder:
         async def _simulate_transaction(x):
             # signature = client.simulate_transaction(x).meta().signature()
 
-            return SimpleNamespace(value=SimpleNamespace(err=None))
+            return SimulateTransactionResp(
+                RpcSimulateTransactionResult(),
+                RpcResponseContext(slot=123),  # type: ignore
+            )
 
         async def _send_raw_transaction(x):
             signature = client.simulate_transaction(tx).meta().signature()
-
-            return SimpleNamespace(value=signature)
+            return SendTransactionResp(value=signature)
 
         service.rpc_client.client.simulate_transaction = _simulate_transaction  # type: ignore
         service.rpc_client.client.send_raw_transaction = _send_raw_transaction  # type: ignore

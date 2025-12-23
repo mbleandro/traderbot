@@ -39,54 +39,70 @@ class AsyncRPCClient:
     async def check_signature_is_confirmed(self, signature) -> bool:
         if self.is_dryrun:
             return True
+        try:
+            result = await self.client.get_signature_statuses([signature])
+            status = result.value[0]
 
-        result = await self.client.get_signature_statuses([signature])
-        status = result.value[0]
+            if status is not None:
+                # Se a transação foi processada
+                if status.confirmation_status in [
+                    TransactionConfirmationStatus.Confirmed,
+                    TransactionConfirmationStatus.Finalized,
+                ]:
+                    return True
+                if status.err is not None:
+                    raise Exception(f"Transação falhou: {status.err}")
 
-        if status is not None:
-            # Se a transação foi processada
-            if status.confirmation_status in [
-                TransactionConfirmationStatus.Confirmed,
-                TransactionConfirmationStatus.Finalized,
-            ]:
-                return True
-            if status.err is not None:
-                raise Exception(f"Transação falhou: {status.err}")
-
-        raise Exception(f"Transação falhou: {result.value}")
+            raise Exception(f"Transação falhou: {result.value}")
+        finally:
+            self.logger.debug(
+                f"check_signature_is_confirmed: tx={signature.to_json()} {result.to_json()=}"
+            )
 
     async def sign_transaction(
         self, tx: VersionedTransaction, keypair: Keypair
     ) -> VersionedTransaction:
-        await self.is_connected()
-        latest = await self.client.get_latest_blockhash()
+        try:
+            await self.is_connected()
+            latest = await self.client.get_latest_blockhash()
 
-        blockhash = latest.value.blockhash
-        message = tx.message
-        message = MessageV0(
-            header=tx.message.header,
-            account_keys=tx.message.account_keys,
-            recent_blockhash=blockhash,
-            instructions=tx.message.instructions,
-            address_table_lookups=tx.message.address_table_lookups,  # type: ignore
-        )
+            blockhash = latest.value.blockhash
+            message = tx.message
+            message = MessageV0(
+                header=tx.message.header,
+                account_keys=tx.message.account_keys,
+                recent_blockhash=blockhash,
+                instructions=tx.message.instructions,
+                address_table_lookups=tx.message.address_table_lookups,  # type: ignore
+            )
 
-        new_tx = VersionedTransaction(
-            message=message,
-            keypairs=[keypair],
-        )
+            new_tx = VersionedTransaction(
+                message=message,
+                keypairs=[keypair],
+            )
 
-        signature = keypair.sign_message(to_bytes_versioned(message))
+            signature = keypair.sign_message(to_bytes_versioned(message))
 
-        new_tx.signatures = [signature]
-        return new_tx
+            new_tx.signatures = [signature]
+            return new_tx
+        finally:
+            self.logger.debug(
+                f"sign_transaction: tx={tx.to_json()} signed_tx={new_tx.to_json()} latest_blockhash{latest.to_json()}"
+            )
 
     async def simulate_transaction(self, new_tx: VersionedTransaction):
-        await self.is_connected()
-        simulation = await self.client.simulate_transaction(new_tx)
-        if simulation.value.err:
-            raise Exception(f"Erro ao simular transação: {str(simulation.value.err)}")
-        return simulation
+        try:
+            await self.is_connected()
+            simulation = await self.client.simulate_transaction(new_tx)
+            if simulation.value.err:
+                raise Exception(
+                    f"Erro ao simular transação: {str(simulation.value.err)}"
+                )
+            return simulation
+        finally:
+            self.logger.debug(
+                f"simulate_transaction: tx={new_tx.to_json()} {simulation.to_json()=}"
+            )
 
     async def send_transaction(
         self, new_tx: VersionedTransaction
@@ -94,9 +110,13 @@ class AsyncRPCClient:
         if self.is_dryrun:
             return SendTransactionResp(value=Signature.new_unique())
 
-        await self.is_connected()
-        resp = await self.client.send_raw_transaction(bytes(new_tx))
-        signature = resp.value
+        try:
+            await self.is_connected()
+            resp = await self.client.send_raw_transaction(bytes(new_tx))
+        finally:
+            self.logger.debug(
+                f"send_transaction: tx={new_tx.to_json()} {resp.to_json()=}"
+            )
 
         return resp
 
@@ -119,9 +139,6 @@ class AsyncRPCClient:
         await self.is_connected()
         balances: dict[Pubkey, Decimal] = {}
 
-        # ====================================================
-        # 2 - Listar todas as contas SPL pertencentes à wallet
-        # ====================================================
         for token in [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID]:
             try:
                 token_accounts = await self.client.get_token_accounts_by_owner(

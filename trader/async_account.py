@@ -49,37 +49,51 @@ class AsyncAccount:
             self.balances_last_update = datetime.now()
         for balance in self.balances:
             if balance.mint == mint:
-                return Decimal(str(balance.available))
+                self.logger.debug(
+                    f"get_balance: {str(balance.mint)=} {balance.available=}"
+                )
+                return balance.available
         return Decimal("0.0")
 
     def get_position(self) -> Position | None:
         """Retorna a posição atual"""
         return self.current_position
 
-    async def can_buy(self) -> bool:
+    async def can_buy(self):
         """Verifica se é possível executar uma compra"""
         # Não pode comprar se já tem posição long
         if (
             self.current_position is not None
             and self.current_position.type == PositionType.LONG
         ):
-            return False
+            raise ValueError(
+                "Não é possível executar compra no momento. Já existe posicão"
+            )
 
-        brl_balance = await self.get_balance(self.input_mint)
-        self.logger.debug(f"can_buy. input_mint={str(self.input_mint)} {brl_balance=}")
-        return brl_balance > Decimal("0.01")  # Mínimo para operar
+        balance = await self.get_balance(self.input_mint)
+        self.logger.debug(f"can_buy: input_mint={str(self.input_mint)} {balance=}")
+        if balance < Decimal("0.01"):  # Mínimo para operar
+            raise ValueError(
+                "Não é possível executar compra no momento. Sem valor minimo"
+            )
 
-    async def can_sell(self) -> bool:
+    async def can_sell(self):
         """Verifica se é possível executar uma venda"""
         # Só pode vender se tem posição long
         if (
             self.current_position is None
             or self.current_position.type != PositionType.LONG
         ):
-            return False
+            raise ValueError(
+                "Não é possível executar venda no momento. Sem posicão de compra"
+            )
 
-        btc_balance = await self.get_balance(self.output_mint)
-        return btc_balance > Decimal("0.00001")  # Mínimo para vender
+        balance = await self.get_balance(self.output_mint)
+        self.logger.debug(f"can_sell: output_mint={str(self.output_mint)} {balance=}")
+        if balance < Decimal("0.00001"):  # Mínimo para vender
+            raise ValueError(
+                "Não é possível executar venda no momento. Sem valor minimo"
+            )
 
     async def place_order(
         self, price: Decimal, side: OrderSide, quantity: Decimal
@@ -92,8 +106,8 @@ class AsyncAccount:
         raise ValueError("Invalid Order Side.")
 
     async def buy(self, price: Decimal, quantity: Decimal) -> Order:
-        if not await self.can_buy():
-            raise ValueError("Não é possível executar compra no momento")
+        await self.can_buy()
+
         try:
             order_id = await self.provider.swap(
                 self.input_mint,
@@ -126,8 +140,7 @@ class AsyncAccount:
             raise
 
     async def sell(self, price: Decimal, quantity: Decimal) -> Order:
-        if not await self.can_sell():
-            raise ValueError("Não é possível executar venda no momento")
+        await self.can_sell()
 
         try:
             order_id = await self.provider.swap(
@@ -145,7 +158,10 @@ class AsyncAccount:
                 side=OrderSide.SELL,
                 timestamp=datetime.now(),
             )
-            self.logger.debug(f"ORDER PLACED: {asdict(order)}", extra=asdict(order))
+            self.logger.debug(
+                f"ORDER PLACED: order={asdict(order)} position={asdict(self.current_position) if self.current_position else ''}",
+                extra=asdict(order),
+            )
             assert self.current_position
             self.current_position.exit_order = order
             self.total_pnl += self.current_position.realized_pnl

@@ -33,6 +33,9 @@ clean: ## Remove arquivos temporários e cache
 rundry: ## Executa o bot principal com dados reais, mas com a estrategia com parametros pra não comprar
 	$(UV) run --env-file .env main.py run dry SOL-USDC random 'sell_chance=20 buy_chance=40'
 
+rundry2:
+	$(UV) run --env-file .env main.py run dry NOBODY-USDC random 'sell_chance=100 buy_chance=100'
+
 rundrycomposer_sol:
 	$(UV) run --env-file .env main.py run dry SOL-USDC composer 'buy_mode=all sell_mode=any'
 

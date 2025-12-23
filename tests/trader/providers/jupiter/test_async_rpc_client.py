@@ -43,12 +43,6 @@ class FakeSolanaClient:
         )
 
 
-class FakeAsyncRPCClient(AsyncRPCClient):
-    def __init__(self):
-        self.is_dryrun = False
-        self.client = FakeSolanaClient()
-
-
 @pytest.fixture
 def mock_signed_transaction():
     keypair = Keypair()
@@ -74,10 +68,14 @@ def mock_signed_transaction():
 
 
 async def test_send_transaction(mock_signed_transaction):
-    resp = await FakeAsyncRPCClient().send_transaction(mock_signed_transaction)
+    resp = await AsyncRPCClient(client=FakeSolanaClient()).send_transaction(
+        mock_signed_transaction
+    )
     assert resp.value is not None
 
 
 async def test_simulate_transaction(mock_signed_transaction):
-    resp = await FakeAsyncRPCClient().simulate_transaction(mock_signed_transaction)
+    resp = await AsyncRPCClient(client=FakeSolanaClient()).simulate_transaction(
+        mock_signed_transaction
+    )
     assert resp.value is not None
