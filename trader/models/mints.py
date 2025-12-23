@@ -1,6 +1,6 @@
-from solders.pubkey import Pubkey
 from decimal import Decimal
-from typing import Dict
+
+from solders.pubkey import Pubkey
 
 
 class Mint:

@@ -1,18 +1,16 @@
 import asyncio
-from datetime import datetime
-import time
-from solders.pubkey import Pubkey
-
-from trader.models import TickerData, SOLANA_MINTS
-
 import logging
+import time
+from datetime import datetime
 from decimal import Decimal
 from typing import List
 
 from solders.keypair import Keypair
+from solders.pubkey import Pubkey
 from solders.solders import SendTransactionResp
 from solders.transaction import VersionedTransaction
 
+from trader.models import SOLANA_MINTS, TickerData
 from trader.models.account_data import MintBalance
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient, Interval
 from trader.providers.jupiter.async_rpc_client import AsyncRPCClient

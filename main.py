@@ -1,22 +1,22 @@
 import datetime
-from trader.bot.async_websocket_bot import AsyncWebsocketTradingBot
 import logging
-from rich.logging import RichHandler
-from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
-from trader.trading_strategy import StrategyComposer
-from trader.models.bot_config import (
-    create_bot_config,
-    get_keypair_from_env,
-    RunningMode,
-)
 
 import typer
+from rich.logging import RichHandler
 
 from trader import get_strategy_cls
+from trader.bot.async_websocket_bot import AsyncWebsocketTradingBot
+from trader.models.bot_config import (
+    RunningMode,
+    create_bot_config,
+    get_keypair_from_env,
+)
 from trader.notification.notification_service import (
     NullNotificationService,
     TelegramNotificationService,
 )
+from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
+from trader.trading_strategy import StrategyComposer
 
 app = typer.Typer()
 

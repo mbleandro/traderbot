@@ -1,10 +1,9 @@
-from trader.providers import JupiterQuoteResponse, JupiterRoutePlan, JupiterSwapInfo
-import httpx
 import os
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest import mock
 
+import httpx
 import pytest
 from solana.rpc.async_api import AsyncClient as SolanaClient
 from solders.keypair import Keypair
@@ -15,18 +14,19 @@ from solders.solders import (
     GetTokenAccountsByOwnerResp,
     LiteSVM,
     Message,
+    MessageV0,
     RpcKeyedAccount,
     RpcResponseContext,
-    to_bytes_versioned,
-    transfer,
-    MessageV0,
-    SimulateTransactionResp,
     RpcSimulateTransactionResult,
     SendTransactionResp,
+    SimulateTransactionResp,
+    to_bytes_versioned,
+    transfer,
 )
 from solders.transaction import VersionedTransaction
 
 from trader.models.account_data import MintBalance
+from trader.providers import JupiterQuoteResponse, JupiterRoutePlan, JupiterSwapInfo
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 
 

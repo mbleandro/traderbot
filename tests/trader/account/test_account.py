@@ -1,10 +1,10 @@
-from typing import Any
 from datetime import datetime
 from decimal import Decimal
+from unittest.mock import AsyncMock, patch
+
+from trader.async_account import AsyncAccount
 from trader.models import SOLANA_MINTS, Order, OrderSide, Position, PositionType
 from trader.providers import AsyncJupiterProvider
-from unittest.mock import AsyncMock, patch
-from trader.async_account import AsyncAccount
 
 
 async def test_buy():

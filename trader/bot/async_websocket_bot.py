@@ -1,17 +1,15 @@
-from dataclasses import asdict
-from functools import cached_property
-from trader.models import SOLANA_MINTS
-from solders.pubkey import Pubkey
-from trader.async_account import AsyncAccount
-import logging
-from trader.models.bot_config import BotConfig
 import asyncio
+import logging
 import traceback
 from decimal import Decimal
+from functools import cached_property
 
 from rich.console import Console
-from rich.text import Text
+from solders.pubkey import Pubkey
 
+from trader.async_account import AsyncAccount
+from trader.models import SOLANA_MINTS
+from trader.models.bot_config import BotConfig
 from trader.models.order import Order
 from trader.models.position import Position
 from trader.models.public_data import TickerData

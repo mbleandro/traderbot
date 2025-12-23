@@ -1,6 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
-from trader.models import TickerData, Position, OrderSide, OrderSignal, PositionType
+
+from trader.models import OrderSide, OrderSignal, Position, PositionType
 from trader.models.order import Order
 from trader.trading_strategy import StrategyComposer, TradingStrategy
 

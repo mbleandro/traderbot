@@ -1,13 +1,11 @@
-from solders.keypair import Keypair
-from trader.models import SOLANA_MINTS
-from trader.providers import AsyncJupiterProvider
-import re
 from decimal import Decimal
 from unittest import mock
 
-import pytest
+from solders.keypair import Keypair
 
+from trader.models import SOLANA_MINTS
 from trader.models.public_data import TickerData
+from trader.providers import AsyncJupiterProvider
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
 from trader.providers.jupiter.jupiter_data import JupiterQuoteResponse
 

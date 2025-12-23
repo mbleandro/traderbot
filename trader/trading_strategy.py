@@ -1,8 +1,7 @@
 import logging
-from tkinter import W
-from datetime import datetime, timedelta
 import random
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pandas as pd
@@ -509,8 +508,8 @@ class StrategyComposer(TradingStrategy):
 
     def __init__(
         self,
-        sell_mode=str("all"),
-        buy_mode=str("all"),
+        sell_mode="all",
+        buy_mode="all",
         buy_strategies: list[TradingStrategy] = [],
         sell_strategies: list[TradingStrategy] = [],
     ):

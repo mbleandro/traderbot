@@ -5,7 +5,6 @@ import pytest
 
 from trader.models.order import Order, OrderSide
 from trader.models.position import Position, PositionType
-from trader.models.public_data import TickerData
 from trader.trading_strategy import TargetValueStrategy
 
 

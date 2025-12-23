@@ -3,11 +3,11 @@ Dataclasses para dados de conta da API do Mercado Bitcoin.
 Estes dados requerem autenticação para serem acessados.
 """
 
-from solders.pubkey import Pubkey
-
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Dict
+
+from solders.pubkey import Pubkey
 
 
 @dataclass

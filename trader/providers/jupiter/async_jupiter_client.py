@@ -1,20 +1,20 @@
-from dataclasses import asdict
+import asyncio
 import base64
+import json
+import logging
+from dataclasses import asdict
+from datetime import datetime
+from decimal import Decimal
+from enum import StrEnum
+from typing import Any, Dict
+
+import httpx
+import websockets
 from solders.pubkey import Pubkey
 from solders.solders import VersionedTransaction
-import asyncio
 from websockets.asyncio.client import ClientConnection
-import json
-import websockets
-from enum import StrEnum
-from decimal import Decimal
-from datetime import datetime
-from trader.models.public_data import TickerData
-from collections.abc import Callable
-import logging
-from typing import Any, Dict
-import httpx
 
+from trader.models.public_data import TickerData
 from trader.providers.jupiter.jupiter_data import JupiterQuoteResponse
 
 _use_new = False

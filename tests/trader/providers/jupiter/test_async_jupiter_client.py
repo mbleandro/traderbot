@@ -1,5 +1,6 @@
-import httpx
 from unittest import mock
+
+import httpx
 
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
 from trader.providers.jupiter.jupiter_data import (

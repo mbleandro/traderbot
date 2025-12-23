@@ -1,39 +1,32 @@
 import base64
-from solders.account_decoder import UiAccountEncoding
+from decimal import Decimal
+
 from solana.rpc.types import TokenAccountOpts
+from solders.keypair import Keypair
 from solders.solders import (
-    LiteSVM,
-    Transaction,
+    TOKEN_PROGRAM_ID,
+    Account,
     FailedTransactionMetadata,
-    VersionedTransaction,
-    SimulateTransactionResp,
+    GetAccountInfoResp,
+    GetLatestBlockhashResp,
+    GetTokenAccountsByOwnerResp,
+    LiteSVM,
+    Pubkey,
+    RpcBlockhash,
+    RpcKeyedAccount,
+    RpcResponseContext,
     RpcSimulateTransactionResult,
     SendTransactionResp,
-    Pubkey,
-    get_associated_token_address,
+    SimulateTransactionResp,
     TokenAccount,
     TokenAccountState,
-    Account,
-    TOKEN_PROGRAM_ID,
-    GetAccountInfoResp,
-    RpcResponseContext,
-    GetTokenAccountsByOwnerResp,
-    RpcKeyedAccount,
-    GetLatestBlockhashResp,
-    RpcBlockhash,
-    Hash,
-    AddressLookupTableAccount,
+    Transaction,
+    VersionedTransaction,
+    get_associated_token_address,
 )
-from decimal import Decimal
-from trader.models import OrderSignal, OrderSide, Position, TickerData
-from trader.notification import NullNotificationService
-from trader.models.bot_config import BotConfig
+
+from trader.models import OrderSide, OrderSignal, Position
 from trader.trading_strategy import TradingStrategy
-from solders.keypair import Keypair
-from trader.bot.async_websocket_bot import AsyncWebsocketTradingBot
-from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
-from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
-from trader.providers.jupiter.async_rpc_client import AsyncRPCClient
 
 
 class FakeSolanaClient:

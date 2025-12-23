@@ -1,13 +1,13 @@
-from dataclasses import asdict
-from functools import cached_property
-from solders.pubkey import Pubkey
 import logging
+from dataclasses import asdict
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from solders.pubkey import Pubkey
+
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 
-from .models import OrderSide, Position, PositionType, TickerData, Order
+from .models import Order, OrderSide, Position, PositionType, TickerData
 
 
 class AsyncAccount:

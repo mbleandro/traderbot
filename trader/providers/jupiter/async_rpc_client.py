@@ -1,21 +1,22 @@
-from propcache.api import cached_property
+import json
 import logging
-from solana.exceptions import SolanaRpcException
-from solders.signature import Signature
-from solana.rpc.types import TokenAccountOpts
-from spl.token.constants import TOKEN_2022_PROGRAM_ID
+import os
 from decimal import Decimal
-from solders.pubkey import Pubkey
-from solders.rpc.responses import SendTransactionResp
+
+from solana.exceptions import SolanaRpcException
+from solana.rpc.async_api import AsyncClient
+from solana.rpc.types import TokenAccountOpts
 from solders.keypair import Keypair
 from solders.message import MessageV0, to_bytes_versioned
+from solders.pubkey import Pubkey
+from solders.rpc.responses import SendTransactionResp
+from solders.signature import Signature
 from solders.solders import (
+    TOKEN_PROGRAM_ID,
     TransactionConfirmationStatus,
     VersionedTransaction,
-    TOKEN_PROGRAM_ID,
 )
-import os
-from solana.rpc.async_api import AsyncClient
+from spl.token.constants import TOKEN_2022_PROGRAM_ID
 
 
 class AsyncRPCClient:
@@ -113,12 +114,15 @@ class AsyncRPCClient:
         try:
             await self.is_connected()
             resp = await self.client.send_raw_transaction(bytes(new_tx))
+            try:
+                return json.loads(resp.value.to_bytes())["result"]
+            except Exception as ex:
+                self.logger.error(f"ERROR.send_transaction.convert_result: {str(ex)}")
+                return resp
         finally:
             self.logger.debug(
                 f"send_transaction: tx={new_tx.to_json()} {resp.to_json()=}"
             )
-
-        return resp
 
     async def get_lamports(self, pubkey: Pubkey) -> Decimal:
         try:

@@ -1,15 +1,17 @@
-from trader.models import SOLANA_MINTS
-from solders.pubkey import Pubkey
 import os
 import uuid
-from dataclasses import dataclass, field, InitVar
+from dataclasses import InitVar, dataclass
 from enum import StrEnum, auto
+
+from solders.keypair import Keypair
+from solders.pubkey import Pubkey
+
+from trader.models import SOLANA_MINTS
 from trader.notification.notification_service import (
     NotificationService,
 )
 from trader.providers.jupiter.async_jupiter_svc import AsyncJupiterProvider
 from trader.trading_strategy import TradingStrategy
-from solders.keypair import Keypair
 
 
 class RunningMode(StrEnum):
