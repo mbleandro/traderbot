@@ -12,7 +12,6 @@ from trader.models import SOLANA_MINTS
 from trader.models.bot_config import BotConfig
 from trader.models.order import Order
 from trader.models.position import Position
-from trader.models.public_data import TickerData
 
 console = Console()
 
@@ -40,17 +39,17 @@ class AsyncWebsocketTradingBot:
 
         self.total_pnl = Decimal("0.0")
 
-    async def process_market_data(self, current_ticker: TickerData):
+    async def process_market_data(self, current_price):
         position_signal = self.strategy.on_market_refresh(
-            current_ticker.last,
-            current_ticker.spread,
+            current_price,
+            None,  # não vem no websocket
             await self.account.get_balance(self.input_mint),
             self.account.get_position(),
         )
         order = None
         if position_signal:
             order = await self.account.place_order(
-                current_ticker.last,
+                current_price,
                 position_signal.side,
                 position_signal.quantity,
             )
@@ -77,14 +76,14 @@ class AsyncWebsocketTradingBot:
 
         while not should_stop:
             try:
-                current_ticker = await self.account.get_price(self.output_mint)
+                current_price = await self.account.get_price(self.output_mint)
                 log_ticker(
                     self.symbol,
-                    current_ticker.last,
+                    current_price,
                     self.account.get_total_realized_pnl(),
                 )
 
-                order = await self.process_market_data(current_ticker)
+                order = await self.process_market_data(current_price)
                 if order:
                     log_placed_order(order)
                     self.notification_service.send_message(
@@ -95,7 +94,7 @@ class AsyncWebsocketTradingBot:
 
                 position = self.account.get_position()
                 if position:
-                    log_position(position, current_ticker.last)
+                    log_position(position, current_price)
 
             except KeyboardInterrupt:
                 self.logger.warning("Bot interrompido pelo usuário")

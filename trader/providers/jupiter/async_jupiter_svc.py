@@ -37,21 +37,27 @@ class AsyncJupiterProvider:
         interval: Interval = Interval.SECOND_15,
         candle_qty: int = 100,
     ) -> list[TickerData]:
-        return await self.jupiter_client.get_candles(str(mint))
+        candles_json = await self.jupiter_client.get_candles(str(mint))
+        tickers: list[TickerData] = []
+        for candle in candles_json:
+            tickers.append(
+                TickerData(
+                    pair="ignored",
+                    timestamp=datetime.fromtimestamp(candle["time"]),
+                    high=Decimal(candle["high"]),
+                    low=Decimal(candle["low"]),
+                    open=Decimal(candle["open"]),
+                    last=Decimal(candle["close"]),
+                    buy=Decimal(candle["open"]),
+                    sell=Decimal(candle["open"]),
+                    vol=Decimal(candle["volume"]),
+                )
+            )
+        return tickers
 
-    async def get_price_ticker_data(self, mint: Pubkey) -> TickerData:
+    async def get_price_ticker_data(self, mint: Pubkey) -> Decimal:
         price = await self.jupiter_client.get_price(str(mint))
-        return TickerData(
-            buy=price,
-            timestamp=datetime.now(),
-            high=price,  # Não disponível, usa preço atual
-            last=price,
-            low=price,  # Não disponível, usa preço atual
-            open=price,  # Não disponível, usa preço atual
-            pair="ignored",
-            sell=price,
-            vol=Decimal("0"),  # Não disponível via quote API
-        )
+        return price
 
     async def get_account_balance(self) -> List[MintBalance]:
         balances = []

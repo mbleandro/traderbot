@@ -28,7 +28,7 @@ def test_composer_call_refresh_for_all_when_buy():
     comp = StrategyComposer(
         buy_strategies=[buy_strategy], sell_strategies=[sell_strategy]
     )
-    for i in range(3):
+    for _i in range(3):
         signal = comp.on_market_refresh(
             Decimal("10.0001"),
             Decimal("0.0001"),
@@ -47,7 +47,7 @@ def test_composer_call_refresh_for_all_when_sell():
     comp = StrategyComposer(
         buy_strategies=[buy_strategy], sell_strategies=[sell_strategy]
     )
-    for i in range(3):
+    for _i in range(3):
         signal = comp.on_market_refresh(
             Decimal("10.0001"),
             Decimal("0.0001"),

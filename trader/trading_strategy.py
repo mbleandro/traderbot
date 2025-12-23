@@ -32,8 +32,7 @@ class TradingStrategy(ABC):
         return quantity
 
     def setup(self, ticker_history: list[TickerData]):
-        """Configura a estratégia, se necessário"""
-        pass
+        return
 
     def __repr__(self):
         _vars = vars(self)
@@ -510,15 +509,15 @@ class StrategyComposer(TradingStrategy):
         self,
         sell_mode="all",
         buy_mode="all",
-        buy_strategies: list[TradingStrategy] = [],
-        sell_strategies: list[TradingStrategy] = [],
+        buy_strategies: list[TradingStrategy] | None = None,
+        sell_strategies: list[TradingStrategy] | None = None,
     ):
         super().__init__()
         assert sell_mode in ("all", "any")
         assert buy_mode in ("all", "any")
         self.sell_mode = sell_mode
         self.buy_mode = buy_mode
-        self.buy_strategies = buy_strategies
+        self.buy_strategies = buy_strategies or []
         if not buy_strategies:
             self.buy_strategies = [
                 WeightedMovingAverageStrategy(
@@ -546,7 +545,7 @@ class StrategyComposer(TradingStrategy):
                     period=15,
                 ),
             ]
-        self.sell_strategies = sell_strategies
+        self.sell_strategies = sell_strategies or []
         if not sell_strategies:
             self.sell_strategies = [
                 TrailingStopLossStrategy(stop_loss_percent="3.1"),

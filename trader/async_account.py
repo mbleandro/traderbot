@@ -31,7 +31,7 @@ class AsyncAccount:
     def __repr__(self):
         return f"{self.__class__.__name__} for {self.input_mint=} and {self.output_mint=} with current_position on {self.current_position}"
 
-    async def get_price(self, mint: Pubkey) -> TickerData:
+    async def get_price(self, mint: Pubkey) -> Decimal:
         return await self.provider.get_price_ticker_data(mint)
 
     async def get_candles(self, mint: Pubkey) -> list[TickerData]:

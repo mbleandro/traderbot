@@ -86,20 +86,16 @@ class FakeSolanaClient:
         return SendTransactionResp(value=signature)
 
     async def simulate_transaction(self, tx: VersionedTransaction):
-        result = self.client.simulate_transaction(tx)
-
         return SimulateTransactionResp(
             RpcSimulateTransactionResult(),
             RpcResponseContext(slot=123),  # type: ignore
         )
 
     async def get_account_info(self, pubkey: Pubkey):
-        owner = FakeSolanaClient.keypair.pubkey()
         account = self.client.get_account(pubkey)
         return GetAccountInfoResp(value=account, context=RpcResponseContext(slot=123))
 
     async def get_token_accounts_by_owner(self, owner: Pubkey, opts: TokenAccountOpts):
-        account = self.client.get_account(owner)
         return GetTokenAccountsByOwnerResp(
             value=[
                 RpcKeyedAccount(

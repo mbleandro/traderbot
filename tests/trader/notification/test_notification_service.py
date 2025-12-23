@@ -30,5 +30,4 @@ def test_telegram_send_message_handles_exception(mock_post, caplog):
 
     with caplog.at_level(logging.INFO):
         service.send_message("Hello World")
-    captured = caplog
     assert "Erro ao enviar alerta Telegram:" in caplog.text

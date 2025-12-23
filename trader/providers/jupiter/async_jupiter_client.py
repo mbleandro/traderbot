@@ -14,7 +14,6 @@ from solders.pubkey import Pubkey
 from solders.solders import VersionedTransaction
 from websockets.asyncio.client import ClientConnection
 
-from trader.models.public_data import TickerData
 from trader.providers.jupiter.jupiter_data import JupiterQuoteResponse
 
 _use_new = False
@@ -81,7 +80,7 @@ class AsyncJupiterClient:
 
     async def get_candles(
         self, mint: str, interval: Interval = Interval.SECOND_15, candle_qty: int = 100
-    ) -> list[TickerData]:
+    ) -> list[Dict[str, Any]]:
         end_time = int(datetime.now().timestamp() * 1000)
         url = (
             f"https://datapi.jup.ag/v2/charts/{mint}"
@@ -101,22 +100,7 @@ class AsyncJupiterClient:
             response.raise_for_status()
             response_json = response.json()
 
-            tickers: list[TickerData] = []
-            for candle in response_json["candles"]:
-                tickers.append(
-                    TickerData(
-                        pair="ignored",
-                        timestamp=datetime.fromtimestamp(candle["time"]),
-                        high=Decimal(candle["high"]),
-                        low=Decimal(candle["low"]),
-                        open=Decimal(candle["open"]),
-                        last=Decimal(candle["close"]),
-                        buy=Decimal(candle["open"]),
-                        sell=Decimal(candle["open"]),
-                        vol=Decimal(candle["volume"]),
-                    )
-                )
-            return tickers
+            return response_json["candles"]
         except Exception as ex:
             ex.add_note(f"URL: {url}")
             if response is not None:

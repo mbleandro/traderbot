@@ -1,6 +1,5 @@
 import os
 from decimal import Decimal
-from types import SimpleNamespace
 from unittest import mock
 
 import httpx
@@ -8,9 +7,11 @@ import pytest
 from solana.rpc.async_api import AsyncClient as SolanaClient
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
+from solders.rpc.responses import RpcBlockhash
 from solders.solders import (
     Account,
     GetAccountInfoResp,
+    GetLatestBlockhashResp,
     GetTokenAccountsByOwnerResp,
     LiteSVM,
     Message,
@@ -283,7 +284,11 @@ class TestPlaceOrder:
         blockhash = client.latest_blockhash()
 
         async def latest_block():
-            return SimpleNamespace(value=SimpleNamespace(blockhash=blockhash))
+            client.set_blockhash_check(False)
+            return GetLatestBlockhashResp(
+                RpcBlockhash(client.latest_blockhash(), 1),
+                context=RpcResponseContext(slot=0),
+            )
 
         api.rpc_client.client.get_latest_blockhash = latest_block  # type: ignore
         msg = Message.new_with_blockhash(ixs, keypair.pubkey(), blockhash)

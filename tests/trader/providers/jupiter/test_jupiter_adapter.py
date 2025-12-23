@@ -4,7 +4,6 @@ from unittest import mock
 from solders.keypair import Keypair
 
 from trader.models import SOLANA_MINTS
-from trader.models.public_data import TickerData
 from trader.providers import AsyncJupiterProvider
 from trader.providers.jupiter.async_jupiter_client import AsyncJupiterClient
 from trader.providers.jupiter.jupiter_data import JupiterQuoteResponse
@@ -44,24 +43,13 @@ class TestGetTicker:
         return JupiterQuoteResponse.from_dict(data)
 
     @mock.patch.object(AsyncJupiterClient, "get_price", return_value=Decimal("2"))
-    async def test_get_ticker(self, mock_get_quote):
+    async def test_get_ticker(self, mock_get_price):
         adapter = AsyncJupiterProvider(Keypair(), rpc_client=object)
-        ticker = await adapter.get_price_ticker_data(
+        price = await adapter.get_price_ticker_data(
             SOLANA_MINTS.get_by_symbol("SOL").pubkey
         )
         buy_price = Decimal("2")
-        assert ticker == TickerData(
-            buy=buy_price,
-            timestamp=mock.ANY,
-            high=buy_price,
-            last=buy_price,
-            low=buy_price,
-            open=buy_price,
-            pair="ignored",
-            sell=buy_price,
-            vol=Decimal("0"),
-            spread=None,
-        )
-        mock_get_quote.assert_has_calls(
+        assert price == buy_price
+        mock_get_price.assert_has_calls(
             [mock.call("So11111111111111111111111111111111111111112")]
         )
